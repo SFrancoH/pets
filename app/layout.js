@@ -2,7 +2,7 @@ import "./globals.css";
 
 export const metadata = {
   title: "PETS",
-  description: "Administración segura de propietarios y mascotas"
+  description: "Administración segura de empresas, usuarios y mascotas"
 };
 
 export default function RootLayout({ children }) {
