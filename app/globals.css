@@ -188,6 +188,28 @@ input:focus {
   box-shadow: 0 0 0 4px rgba(20, 125, 74, 0.1);
 }
 
+.passwordControl {
+  position: relative;
+  display: block;
+}
+
+.passwordControl input {
+  padding-right: 78px;
+}
+
+.passwordToggle {
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  min-height: 34px;
+  padding: 0 10px;
+  transform: translateY(-50%);
+  border-radius: 9px;
+  color: var(--green);
+  background: var(--green-soft);
+  font-size: 12px;
+}
+
 button {
   min-height: 46px;
   padding: 0 18px;

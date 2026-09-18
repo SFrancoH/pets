@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { logout } from "@/app/actions";
+import PasswordField from "@/components/password-field";
 import { requireProfile } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -80,7 +81,7 @@ export default async function CompanyDetailPage({ params, searchParams }) {
             <input type="hidden" name="empresa_id" value={company.id} />
             <label>Nombre completo<input name="nombre" minLength={2} maxLength={120} required /></label>
             <label>Correo electrónico<input name="email" type="email" required /></label>
-            <label>Contraseña definitiva<input name="password" type="password" minLength={8} autoComplete="new-password" required /></label>
+            <PasswordField label="Contraseña definitiva" />
             <button type="submit">Crear administrador</button>
           </form>
         </section>

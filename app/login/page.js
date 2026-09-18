@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import PasswordField from "@/components/password-field";
 import { getCurrentProfile } from "@/lib/auth";
 import { login } from "./actions";
 
@@ -33,16 +34,7 @@ export default async function LoginPage({ searchParams }) {
             Correo electrónico
             <input name="email" type="email" autoComplete="email" required />
           </label>
-          <label>
-            Contraseña
-            <input
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              minLength={8}
-              required
-            />
-          </label>
+          <PasswordField autoComplete="current-password" />
           <button type="submit">Ingresar</button>
         </form>
 
