@@ -1,26 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import ConsultationControlPanel from "@/components/consultation-control-panel";
 import DashboardHeader from "@/components/dashboard-header";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { formatDate, requireOperationalProfile } from "@/lib/operational";
 
-const clinicalModules = [
-  "Historia del paciente",
-  "Consulta y control",
-  "Fórmula y remisión",
-  "Procedimientos",
-  "Vacunación",
-  "Desparasitación",
-  "Estética",
-  "Guardería",
-  "Seguimiento",
-  "Consentimientos"
-];
-
-export default async function PetDetailPage({ params }) {
+export default async function PetDetailPage({ params, searchParams }) {
   const profile = await requireOperationalProfile();
   const { id } = await params;
+  const queryParams = await searchParams;
   const admin = getSupabaseAdmin();
   let query = admin
     .from("mascotas")
@@ -30,6 +19,32 @@ export default async function PetDetailPage({ params }) {
   const { data: pet } = await query.maybeSingle();
   if (!pet) notFound();
 
+  const [veterinariansResult, consultationsResult] = await Promise.all([
+    admin
+      .from("usuarios")
+      .select("id, nombre, rol, empresa_id")
+      .eq("empresa_id", pet.empresa_id)
+      .eq("rol", "veterinario")
+      .eq("activo", true)
+      .order("nombre"),
+    admin
+      .from("consultas_controles")
+      .select("*")
+      .eq("empresa_id", pet.empresa_id)
+      .eq("mascota_id", pet.id)
+      .order("fecha_registro", { ascending: false })
+  ]);
+  const veterinarians = [...(veterinariansResult.data || [])];
+  if (profile.rol === "super_admin" && !veterinarians.some((vet) => vet.id === profile.id)) {
+    veterinarians.unshift({
+      id: profile.id,
+      nombre: profile.nombre,
+      rol: profile.rol,
+      empresa_id: null
+    });
+  }
+  const historyAvailable = !consultationsResult.error;
+  const consultations = consultationsResult.data || [];
   const owners = (pet.propietarios_mascotas || []).map((relation) => relation.propietarios).filter(Boolean);
   const details = [
     ["Número de carnet", pet.numero_carnet],
@@ -64,11 +79,29 @@ export default async function PetDetailPage({ params }) {
           </span>
         </div>
 
-        <nav className="clinicalModules" aria-label="Módulos clínicos">
-          {clinicalModules.map((module, index) => (
-            <button className={index === 0 ? "active" : ""} type="button" key={module}>{module}</button>
-          ))}
-        </nav>
+        <ConsultationControlPanel
+          pet={{
+            id: pet.id,
+            nombre: pet.nombre,
+            numero_carnet: pet.numero_carnet,
+            especie: pet.especie,
+            raza: pet.raza,
+            sexo: pet.sexo,
+            fecha_nacimiento_formateada: formatDate(pet.fecha_nacimiento),
+            estado_reproductivo: pet.estado_reproductivo,
+            color: pet.color,
+            peso_kg: pet.peso_kg
+          }}
+          veterinarians={veterinarians}
+          actor={{ id: profile.id, nombre: profile.nombre, rol: profile.rol }}
+          consultations={consultations}
+          historyAvailable={historyAvailable}
+          recordedAt={new Date().toISOString()}
+          initialModule={queryParams?.modulo === "consulta-control" ? "consulta-control" : "historia"}
+          initialView={queryParams?.vista === "nueva" ? "new" : "history"}
+          success={queryParams?.ok || ""}
+          error={queryParams?.error || ""}
+        />
 
         <section className="recordSection">
           <p className="eyebrow">Información general</p>
