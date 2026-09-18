@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { logout } from "@/app/actions";
+import DashboardHeader from "@/components/dashboard-header";
 import { requireProfile } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createCompany } from "./actions";
@@ -16,18 +16,7 @@ export default async function SuperAdminPage({ searchParams }) {
 
   return (
     <main className="dashboardShell">
-      <header className="dashboardHeader">
-        <div>
-          <div className="brand">PETS</div>
-          <p>Superadministrador</p>
-        </div>
-        <div className="userMenu">
-          <span>{profile.nombre}</span>
-          <form action={logout}>
-            <button className="buttonSecondary">Cerrar sesión</button>
-          </form>
-        </div>
-      </header>
+      <DashboardHeader profile={profile} context="Superadministrador" active="empresas" />
 
       <section className="dashboardContent">
         <div className="sectionHeading">

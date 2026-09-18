@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { logout } from "@/app/actions";
+import DashboardHeader from "@/components/dashboard-header";
 import PasswordField from "@/components/password-field";
 import { requireProfile } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -39,18 +39,7 @@ export default async function CompanyDetailPage({ params, searchParams }) {
 
   return (
     <main className="dashboardShell">
-      <header className="dashboardHeader">
-        <div>
-          <div className="brand">PETS</div>
-          <p>Superadministrador</p>
-        </div>
-        <div className="userMenu">
-          <span>{profile.nombre}</span>
-          <form action={logout}>
-            <button className="buttonSecondary">Cerrar sesión</button>
-          </form>
-        </div>
-      </header>
+      <DashboardHeader profile={profile} context="Superadministrador" active="empresas" />
 
       <section className="dashboardContent">
         <Link className="backLink" href="/super-admin">← Volver a empresas</Link>

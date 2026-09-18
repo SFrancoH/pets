@@ -1,0 +1,76 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+import { requireProfile } from "@/lib/auth";
+import {
+  dateValue,
+  fetchAll,
+  insertInChunks,
+  numberValue,
+  pick,
+  readFirstWorksheet,
+  textValue
+} from "@/lib/excel-import";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export async function importPets(formData) {
+  const actor = await requireProfile(["super_admin"]);
+  const companyId = String(formData.get("empresa_id") || "");
+  const file = formData.get("archivo");
+  if (!uuidPattern.test(companyId)) redirect("/mascotas?error=empresa");
+
+  try {
+    const sourceRows = await readFirstWorksheet(file);
+    const admin = getSupabaseAdmin();
+    const { data: company } = await admin.from("empresas").select("id").eq("id", companyId).eq("activa", true).maybeSingle();
+    if (!company) redirect("/mascotas?error=empresa");
+
+    const existing = await fetchAll((from, to) =>
+      admin.from("mascotas").select("numero_carnet").eq("empresa_id", companyId).range(from, to)
+    );
+    const usedCarnets = new Set(existing.map((row) => String(row.numero_carnet || "").trim().toLowerCase()).filter(Boolean));
+    const rows = [];
+
+    for (const source of sourceRows) {
+      const nombre = textValue(pick(source, ["nombre", "nombre mascota"]));
+      if (!nombre) continue;
+      const numeroCarnet = textValue(pick(source, ["numero_carnet", "numero carnet", "no historia", "no. historia"]));
+      const carnetKey = numeroCarnet?.toLowerCase();
+      if (carnetKey && usedCarnets.has(carnetKey)) continue;
+      if (carnetKey) usedCarnets.add(carnetKey);
+
+      rows.push({
+        empresa_id: companyId,
+        nombre,
+        raza: textValue(pick(source, ["raza"])),
+        especie: textValue(pick(source, ["especie", "tipo"])),
+        peso_kg: numberValue(pick(source, ["peso", "peso_kg", "peso kg"])),
+        fecha_nacimiento: dateValue(pick(source, ["fecha_nacimiento", "fecha de nacimiento"])),
+        sexo: textValue(pick(source, ["sexo"])),
+        temperamento: textValue(pick(source, ["temperamento"])),
+        numero_carnet: numeroCarnet,
+        estado_reproductivo: textValue(pick(source, ["estado_reproductivo", "estado reproductivo"])),
+        numero_partos: numberValue(pick(source, ["numero_partos", "numero de partos"]), true),
+        color: textValue(pick(source, ["color"])),
+        fecha_fallecimiento: dateValue(pick(source, ["fecha_fallecimiento", "fecha de fallecimiento"])),
+        motivo_fallecimiento: textValue(pick(source, ["motivo_fallecimiento", "motivo de fallecimiento"])),
+        comentarios_fallecimiento: textValue(pick(source, ["comentarios_fallecimiento", "comentarios del fallecimiento"])),
+        estado: textValue(pick(source, ["estado"])) || "Activo",
+        creada_por: actor.id,
+        actualizada_por: actor.id
+      });
+    }
+
+    if (!rows.length) redirect("/mascotas?error=sin_filas");
+    await insertInChunks("mascotas", rows, admin);
+    revalidatePath("/mascotas");
+    redirect("/mascotas?ok=importado");
+  } catch (error) {
+    if (error?.digest?.startsWith("NEXT_REDIRECT")) throw error;
+    redirect("/mascotas?error=archivo");
+  }
+}

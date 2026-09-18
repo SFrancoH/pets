@@ -1,4 +1,4 @@
-import { logout } from "@/app/actions";
+import DashboardHeader from "@/components/dashboard-header";
 import PasswordField from "@/components/password-field";
 import { requireProfile } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -47,18 +47,7 @@ export default async function CompanyPage({ searchParams }) {
 
   return (
     <main className="dashboardShell">
-      <header className="dashboardHeader">
-        <div>
-          <div className="brand">PETS</div>
-          <p>{company?.nombre || "Empresa"}</p>
-        </div>
-        <div className="userMenu">
-          <span>{profile.nombre}</span>
-          <form action={logout}>
-            <button className="buttonSecondary">Cerrar sesión</button>
-          </form>
-        </div>
-      </header>
+      <DashboardHeader profile={profile} context={company?.nombre || "Empresa"} active="panel" />
 
       <section className="dashboardContent">
         <p className="eyebrow">
