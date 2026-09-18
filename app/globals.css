@@ -324,6 +324,25 @@ button:hover {
   gap: 16px;
 }
 
+.companyCardLink {
+  position: relative;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.companyCardLink:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 42px rgba(30, 60, 42, 0.12);
+}
+
+.cardArrow {
+  margin-left: auto;
+  color: var(--green);
+  font-size: 24px;
+  font-weight: 800;
+}
+
 .companyCard h2,
 .emptyState h2 {
   margin: 0 0 8px;
@@ -384,6 +403,117 @@ button:hover {
   letter-spacing: -0.04em;
 }
 
+.backLink {
+  display: inline-block;
+  margin-bottom: 28px;
+  color: var(--green);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.topAlert {
+  margin-top: 24px;
+  margin-bottom: 0;
+}
+
+.compactStats {
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+}
+
+.managementSection {
+  margin-top: 32px;
+  padding: clamp(22px, 4vw, 34px);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 36px rgba(30, 60, 42, 0.06);
+}
+
+.managementSection h2 {
+  margin: 0;
+  font-size: 25px;
+  letter-spacing: -0.025em;
+}
+
+.managementSection .eyebrow {
+  margin-top: 0;
+}
+
+.managementForm {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.managementForm label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.userList {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.userRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fbfcfb;
+}
+
+.userIdentity {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.userIdentity span {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.userIdentity small {
+  color: var(--green);
+  font-weight: 800;
+}
+
+.userActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.userActions summary {
+  cursor: pointer;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.smallActionForm {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.smallActionForm input {
+  min-width: 190px;
+}
+
 @media (max-width: 760px) {
   .dashboardHeader,
   .sectionHeading,
@@ -409,5 +539,25 @@ button:hover {
 
   .inlineForm {
     min-width: 100%;
+  }
+
+  .compactStats,
+  .managementForm {
+    grid-template-columns: 1fr;
+  }
+
+  .userRow,
+  .userActions,
+  .smallActionForm {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .userActions,
+  .userActions form,
+  .userActions button,
+  .smallActionForm input,
+  .smallActionForm button {
+    width: 100%;
   }
 }

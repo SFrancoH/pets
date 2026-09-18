@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { logout } from "@/app/actions";
 import { requireProfile } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -58,7 +60,11 @@ export default async function SuperAdminPage({ searchParams }) {
         <div className="companyGrid">
           {companies.length ? (
             companies.map((company) => (
-              <article className="companyCard" key={company.id}>
+              <Link
+                className="companyCard companyCardLink"
+                href={`/super-admin/empresas/${company.id}`}
+                key={company.id}
+              >
                 <div className="companyIcon">{company.nombre.slice(0, 1).toUpperCase()}</div>
                 <div>
                   <h2>{company.nombre}</h2>
@@ -66,7 +72,8 @@ export default async function SuperAdminPage({ searchParams }) {
                     {company.activa ? "Activa" : "Inactiva"}
                   </span>
                 </div>
-              </article>
+                <span className="cardArrow" aria-hidden="true">→</span>
+              </Link>
             ))
           ) : (
             <div className="emptyState">
