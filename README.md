@@ -16,7 +16,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 
 ## Base de datos
 
-Ejecuta `supabase/migrations/001_saas_core.sql` en el SQL Editor de Supabase. La migración crea las tablas `empresas`, `usuarios` y `mascotas`, activa RLS y garantiza que solo pueda existir un `super_admin`.
+Ejecuta `supabase/migrations/001_saas_core.sql` en el SQL Editor de Supabase. La migración crea las tablas `empresas`, `usuarios`, `mascotas`, `propietarios` y `propietarios_mascotas`, activa RLS y garantiza que solo pueda existir un `super_admin`.
 
 ## Comandos
 

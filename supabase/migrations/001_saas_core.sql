@@ -72,7 +72,42 @@ create table if not exists public.mascotas (
     fecha_fallecimiento is null
     or fecha_nacimiento is null
     or fecha_fallecimiento >= fecha_nacimiento
-  )
+  ),
+  unique (empresa_id, id)
+);
+
+create table if not exists public.propietarios (
+  id uuid primary key default gen_random_uuid(),
+  empresa_id uuid not null references public.empresas(id) on delete cascade,
+  nombre text not null check (char_length(trim(nombre)) between 2 and 120),
+  ciudad text,
+  direccion text,
+  telefono text,
+  whatsapp text,
+  email text,
+  tipo_documento text,
+  numero_documento text,
+  estado text not null default 'Activo',
+  notificaciones_whatsapp boolean not null default false,
+  tags text[] not null default '{}',
+  creado_por uuid references auth.users(id) on delete set null,
+  actualizado_por uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (empresa_id, id)
+);
+
+create table if not exists public.propietarios_mascotas (
+  empresa_id uuid not null references public.empresas(id) on delete cascade,
+  propietario_id uuid not null,
+  mascota_id uuid not null,
+  creado_por uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  primary key (propietario_id, mascota_id),
+  foreign key (empresa_id, propietario_id)
+    references public.propietarios (empresa_id, id) on delete cascade,
+  foreign key (empresa_id, mascota_id)
+    references public.mascotas (empresa_id, id) on delete cascade
 );
 
 create index if not exists usuarios_empresa_idx on public.usuarios (empresa_id);
@@ -81,6 +116,16 @@ create index if not exists mascotas_nombre_idx on public.mascotas (empresa_id, n
 create unique index if not exists mascotas_carnet_unico_por_empresa
   on public.mascotas (empresa_id, lower(numero_carnet))
   where numero_carnet is not null and btrim(numero_carnet) <> '';
+create index if not exists propietarios_empresa_idx on public.propietarios (empresa_id);
+create index if not exists propietarios_nombre_idx
+  on public.propietarios (empresa_id, nombre);
+create unique index if not exists propietarios_documento_unico_por_empresa
+  on public.propietarios (empresa_id, lower(numero_documento))
+  where numero_documento is not null and btrim(numero_documento) <> '';
+create index if not exists propietarios_mascotas_empresa_idx
+  on public.propietarios_mascotas (empresa_id);
+create index if not exists propietarios_mascotas_mascota_idx
+  on public.propietarios_mascotas (mascota_id);
 
 create or replace function public.actualizar_updated_at()
 returns trigger
@@ -106,6 +151,11 @@ for each row execute function public.actualizar_updated_at();
 drop trigger if exists mascotas_updated_at on public.mascotas;
 create trigger mascotas_updated_at
 before update on public.mascotas
+for each row execute function public.actualizar_updated_at();
+
+drop trigger if exists propietarios_updated_at on public.propietarios;
+create trigger propietarios_updated_at
+before update on public.propietarios
 for each row execute function public.actualizar_updated_at();
 
 create schema if not exists private;
@@ -158,6 +208,8 @@ grant execute on function private.es_super_admin() to authenticated;
 alter table public.empresas enable row level security;
 alter table public.usuarios enable row level security;
 alter table public.mascotas enable row level security;
+alter table public.propietarios enable row level security;
+alter table public.propietarios_mascotas enable row level security;
 
 drop policy if exists empresas_lectura_por_alcance on public.empresas;
 create policy empresas_lectura_por_alcance
@@ -239,12 +291,108 @@ using (
   )
 );
 
+drop policy if exists propietarios_lectura_por_empresa on public.propietarios;
+create policy propietarios_lectura_por_empresa
+on public.propietarios
+for select
+to authenticated
+using (
+  private.es_super_admin()
+  or empresa_id = private.usuario_actual_empresa_id()
+);
+
+drop policy if exists propietarios_creacion_por_empresa on public.propietarios;
+create policy propietarios_creacion_por_empresa
+on public.propietarios
+for insert
+to authenticated
+with check (
+  private.es_super_admin()
+  or (
+    private.usuario_actual_rol() in ('empresa_admin', 'veterinario')
+    and empresa_id = private.usuario_actual_empresa_id()
+  )
+);
+
+drop policy if exists propietarios_edicion_por_empresa on public.propietarios;
+create policy propietarios_edicion_por_empresa
+on public.propietarios
+for update
+to authenticated
+using (
+  private.es_super_admin()
+  or (
+    private.usuario_actual_rol() in ('empresa_admin', 'veterinario')
+    and empresa_id = private.usuario_actual_empresa_id()
+  )
+)
+with check (
+  private.es_super_admin()
+  or (
+    private.usuario_actual_rol() in ('empresa_admin', 'veterinario')
+    and empresa_id = private.usuario_actual_empresa_id()
+  )
+);
+
+drop policy if exists propietarios_eliminacion_por_empresa on public.propietarios;
+create policy propietarios_eliminacion_por_empresa
+on public.propietarios
+for delete
+to authenticated
+using (
+  private.es_super_admin()
+  or (
+    private.usuario_actual_rol() in ('empresa_admin', 'veterinario')
+    and empresa_id = private.usuario_actual_empresa_id()
+  )
+);
+
+drop policy if exists propietarios_mascotas_lectura on public.propietarios_mascotas;
+create policy propietarios_mascotas_lectura
+on public.propietarios_mascotas
+for select
+to authenticated
+using (
+  private.es_super_admin()
+  or empresa_id = private.usuario_actual_empresa_id()
+);
+
+drop policy if exists propietarios_mascotas_creacion on public.propietarios_mascotas;
+create policy propietarios_mascotas_creacion
+on public.propietarios_mascotas
+for insert
+to authenticated
+with check (
+  private.es_super_admin()
+  or (
+    private.usuario_actual_rol() in ('empresa_admin', 'veterinario')
+    and empresa_id = private.usuario_actual_empresa_id()
+  )
+);
+
+drop policy if exists propietarios_mascotas_eliminacion on public.propietarios_mascotas;
+create policy propietarios_mascotas_eliminacion
+on public.propietarios_mascotas
+for delete
+to authenticated
+using (
+  private.es_super_admin()
+  or (
+    private.usuario_actual_rol() in ('empresa_admin', 'veterinario')
+    and empresa_id = private.usuario_actual_empresa_id()
+  )
+);
+
 revoke all on public.empresas from anon;
 revoke all on public.usuarios from anon;
 revoke all on public.mascotas from anon;
+revoke all on public.propietarios from anon;
+revoke all on public.propietarios_mascotas from anon;
 
 grant select on public.empresas to authenticated;
 grant select on public.usuarios to authenticated;
 grant select, insert, update, delete on public.mascotas to authenticated;
+grant select, insert, update, delete on public.propietarios to authenticated;
+grant select, insert, delete on public.propietarios_mascotas to authenticated;
 
 commit;
