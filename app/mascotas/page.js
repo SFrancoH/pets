@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import DashboardHeader from "@/components/dashboard-header";
+import ImportSubmitButton from "@/components/import-submit-button";
 import Pagination from "@/components/pagination";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -86,7 +87,10 @@ export default async function PetsPage({ searchParams }) {
                     </select>
                   </label>
                   <label>Archivo .xlsx o .csv<input name="archivo" type="file" accept=".xlsx,.csv,text/csv" required /></label>
-                  <button type="submit">Importar mascotas</button>
+                  <ImportSubmitButton
+                    idleLabel="Importar mascotas"
+                    pendingLabel="Importando mascotas..."
+                  />
                   <small>Importa primero las mascotas y después los propietarios. No se permiten carnets repetidos.</small>
                 </form>
               </details>

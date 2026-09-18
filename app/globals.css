@@ -429,6 +429,57 @@ button:hover {
   line-height: 1.45;
 }
 
+.importSubmitButton {
+  gap: 9px;
+}
+
+.importSubmitButton:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.buttonSpinner,
+.progressSpinner {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: importSpin 0.75s linear infinite;
+}
+
+.importProgress {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px;
+  border: 1px solid #b8dec6;
+  border-radius: 11px;
+  color: #135f37;
+  background: #effaf3;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.importProgress span:last-child {
+  display: grid;
+  gap: 3px;
+}
+
+.progressSpinner {
+  width: 19px;
+  height: 19px;
+  margin-top: 2px;
+}
+
+@keyframes importSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .tableToolbar {
   display: flex;
   align-items: center;
