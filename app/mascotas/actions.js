@@ -11,7 +11,8 @@ import {
   numberValue,
   pick,
   readFirstWorksheet,
-  textValue
+  textValue,
+  weightKgValue
 } from "@/lib/excel-import";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -32,31 +33,53 @@ export async function importPets(formData) {
     const existing = await fetchAll((from, to) =>
       admin.from("mascotas").select("numero_carnet").eq("empresa_id", companyId).range(from, to)
     );
-    const usedCarnets = new Set(existing.map((row) => String(row.numero_carnet || "").trim().toLowerCase()).filter(Boolean));
+    const existingCarnets = new Set(existing.map((row) => String(row.numero_carnet || "").trim().toLowerCase()).filter(Boolean));
+    const fileCarnets = new Set();
     const rows = [];
+    let duplicateCarnets = 0;
+    let skippedExisting = 0;
+    let skippedWithoutName = 0;
 
     for (const source of sourceRows) {
       const nombre = textValue(pick(source, ["nombre", "nombre mascota"]));
-      if (!nombre) continue;
-      const numeroCarnet = textValue(pick(source, ["numero_carnet", "numero carnet", "no historia", "no. historia"]));
+      if (!nombre) {
+        skippedWithoutName += 1;
+        continue;
+      }
+      const numeroCarnet = textValue(pick(source, [
+        "numero_carnet",
+        "numero carnet",
+        "numero mero de carnet",
+        "no historia",
+        "no. historia"
+      ]));
       const carnetKey = numeroCarnet?.toLowerCase();
-      if (carnetKey && usedCarnets.has(carnetKey)) continue;
-      if (carnetKey) usedCarnets.add(carnetKey);
+      if (carnetKey && fileCarnets.has(carnetKey)) {
+        duplicateCarnets += 1;
+        continue;
+      }
+      if (carnetKey) fileCarnets.add(carnetKey);
+      if (carnetKey && existingCarnets.has(carnetKey)) {
+        skippedExisting += 1;
+        continue;
+      }
+      const isHopspetExport = Object.hasOwn(source, "fechadenacimiento");
+      const slashOrder = isHopspetExport ? "MDY" : "DMY";
 
       rows.push({
         empresa_id: companyId,
         nombre,
         raza: textValue(pick(source, ["raza"])),
         especie: textValue(pick(source, ["especie", "tipo"])),
-        peso_kg: numberValue(pick(source, ["peso", "peso_kg", "peso kg"])),
-        fecha_nacimiento: dateValue(pick(source, ["fecha_nacimiento", "fecha de nacimiento"])),
+        peso_kg: weightKgValue(pick(source, ["peso", "peso_kg", "peso kg"])),
+        fecha_nacimiento: dateValue(pick(source, ["fecha_nacimiento", "fecha de nacimiento"]), slashOrder),
         sexo: textValue(pick(source, ["sexo"])),
         temperamento: textValue(pick(source, ["temperamento"])),
         numero_carnet: numeroCarnet,
         estado_reproductivo: textValue(pick(source, ["estado_reproductivo", "estado reproductivo"])),
-        numero_partos: numberValue(pick(source, ["numero_partos", "numero de partos"]), true),
+        numero_partos: numberValue(pick(source, ["numero_partos", "numero de partos", "numerodepartos"]), true),
         color: textValue(pick(source, ["color"])),
-        fecha_fallecimiento: dateValue(pick(source, ["fecha_fallecimiento", "fecha de fallecimiento"])),
+        fecha_fallecimiento: dateValue(pick(source, ["fecha_fallecimiento", "fecha de fallecimiento"]), slashOrder),
         motivo_fallecimiento: textValue(pick(source, ["motivo_fallecimiento", "motivo de fallecimiento"])),
         comentarios_fallecimiento: textValue(pick(source, ["comentarios_fallecimiento", "comentarios del fallecimiento"])),
         estado: textValue(pick(source, ["estado"])) || "Activo",
@@ -65,10 +88,14 @@ export async function importPets(formData) {
       });
     }
 
-    if (!rows.length) redirect("/mascotas?error=sin_filas");
-    await insertInChunks("mascotas", rows, admin);
+    if (duplicateCarnets) {
+      redirect(`/mascotas?error=carnets_repetidos&conflictos=${duplicateCarnets}`);
+    }
+    if (!rows.length && !skippedExisting) redirect("/mascotas?error=sin_filas");
+    if (rows.length) await insertInChunks("mascotas", rows, admin, 500);
     revalidatePath("/mascotas");
-    redirect("/mascotas?ok=importado");
+    const omitted = skippedExisting + skippedWithoutName;
+    redirect(`/mascotas?ok=importado&importados=${rows.length}&omitidos=${omitted}`);
   } catch (error) {
     if (error?.digest?.startsWith("NEXT_REDIRECT")) throw error;
     redirect("/mascotas?error=archivo");

@@ -10,6 +10,8 @@ import {
 } from "@/lib/operational";
 import { importOwners } from "./actions";
 
+export const maxDuration = 60;
+
 const allowedLimits = [10, 25, 50, 100];
 const allowedSorts = new Set(["nombre", "ciudad", "numero_documento", "estado"]);
 
@@ -65,7 +67,7 @@ export default async function OwnersPage({ searchParams }) {
             <Link className="actionLink" href="/api/export/propietarios">Descargar Excel</Link>
             {profile.rol === "super_admin" ? (
               <details className="uploadPanel">
-                <summary>Subir Excel</summary>
+                <summary>Subir archivo</summary>
                 <form action={importOwners} className="uploadForm">
                   <label>Empresa
                     <select name="empresa_id" required defaultValue="">
@@ -73,16 +75,22 @@ export default async function OwnersPage({ searchParams }) {
                       {companies.map((company) => <option key={company.id} value={company.id}>{company.nombre}</option>)}
                     </select>
                   </label>
-                  <label>Archivo .xlsx<input name="archivo" type="file" accept=".xlsx" required /></label>
+                  <label>Archivo .xlsx o .csv<input name="archivo" type="file" accept=".xlsx,.csv,text/csv" required /></label>
                   <button type="submit">Importar propietarios</button>
-                  <small>“Números de carnet” puede contener varios valores separados por coma.</small>
+                  <small>Importa primero las mascotas. El sistema agrupa propietarios repetidos y los asocia por carnet.</small>
                 </form>
               </details>
             ) : null}
           </div>
         </div>
 
-        {params?.ok === "importado" ? <div className="successAlert">Archivo importado correctamente.</div> : null}
+        {params?.ok === "importado" ? (
+          <div className="successAlert">
+            Se importaron {Number(params?.importados) || 0} propietarios nuevos y se procesaron {Number(params?.agrupados) || 0} propietarios únicos.
+            {Number(params?.asociados) ? ` Se procesaron ${Number(params.asociados)} asociaciones con mascotas.` : ""}
+            {Number(params?.sin_mascota) ? ` ${Number(params.sin_mascota)} carnets no encontraron una mascota cargada.` : ""}
+          </div>
+        ) : null}
         {params?.error ? <div className="formAlert">No fue posible importar el archivo. Revisa el formato y vuelve a intentarlo.</div> : null}
 
         <div className="tableToolbar">

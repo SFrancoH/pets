@@ -11,6 +11,8 @@ import {
 } from "@/lib/operational";
 import { importPets } from "./actions";
 
+export const maxDuration = 60;
+
 const allowedLimits = [10, 25, 50, 100];
 const allowedSorts = new Set(["nombre", "numero_carnet", "raza", "sexo", "fecha_nacimiento", "estado"]);
 
@@ -75,7 +77,7 @@ export default async function PetsPage({ searchParams }) {
             <Link className="actionLink" href="/api/export/mascotas">Descargar Excel</Link>
             {profile.rol === "super_admin" ? (
               <details className="uploadPanel">
-                <summary>Subir Excel</summary>
+                <summary>Subir archivo</summary>
                 <form action={importPets} className="uploadForm">
                   <label>Empresa
                     <select name="empresa_id" required defaultValue="">
@@ -83,17 +85,28 @@ export default async function PetsPage({ searchParams }) {
                       {companies.map((company) => <option key={company.id} value={company.id}>{company.nombre}</option>)}
                     </select>
                   </label>
-                  <label>Archivo .xlsx<input name="archivo" type="file" accept=".xlsx" required /></label>
+                  <label>Archivo .xlsx o .csv<input name="archivo" type="file" accept=".xlsx,.csv,text/csv" required /></label>
                   <button type="submit">Importar mascotas</button>
-                  <small>Usa la primera fila como encabezado. El campo “Nombre” es obligatorio.</small>
+                  <small>Importa primero las mascotas y después los propietarios. No se permiten carnets repetidos.</small>
                 </form>
               </details>
             ) : null}
           </div>
         </div>
 
-        {params?.ok === "importado" ? <div className="successAlert">Archivo importado correctamente.</div> : null}
-        {params?.error ? <div className="formAlert">No fue posible importar el archivo. Revisa el formato y vuelve a intentarlo.</div> : null}
+        {params?.ok === "importado" ? (
+          <div className="successAlert">
+            Se importaron {Number(params?.importados) || 0} mascotas.
+            {Number(params?.omitidos) ? ` Se omitieron ${Number(params.omitidos)} registros que ya existían o no tenían nombre.` : ""}
+          </div>
+        ) : null}
+        {params?.error === "carnets_repetidos" ? (
+          <div className="formAlert">
+            El archivo tiene {Number(params?.conflictos) || 1} carnet repetido. Corrige el mismo carnet en los archivos de mascotas y propietarios antes de importar.
+          </div>
+        ) : params?.error ? (
+          <div className="formAlert">No fue posible importar el archivo. Revisa el formato y vuelve a intentarlo.</div>
+        ) : null}
 
         <div className="tableToolbar">
           <form className="rowsForm">
