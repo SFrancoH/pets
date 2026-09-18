@@ -56,16 +56,31 @@ create table if not exists public.mascotas (
   fecha_nacimiento date,
   color text,
   peso_kg numeric(7,2) check (peso_kg is null or peso_kg >= 0),
-  notas text,
+  temperamento text,
+  numero_carnet text,
+  estado_reproductivo text,
+  numero_partos integer check (numero_partos is null or numero_partos >= 0),
+  fecha_fallecimiento date,
+  motivo_fallecimiento text,
+  comentarios_fallecimiento text,
+  estado text not null default 'Activo',
   creada_por uuid references auth.users(id) on delete set null,
   actualizada_por uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint mascotas_fechas_validas check (
+    fecha_fallecimiento is null
+    or fecha_nacimiento is null
+    or fecha_fallecimiento >= fecha_nacimiento
+  )
 );
 
 create index if not exists usuarios_empresa_idx on public.usuarios (empresa_id);
 create index if not exists mascotas_empresa_idx on public.mascotas (empresa_id);
 create index if not exists mascotas_nombre_idx on public.mascotas (empresa_id, nombre);
+create unique index if not exists mascotas_carnet_unico_por_empresa
+  on public.mascotas (empresa_id, lower(numero_carnet))
+  where numero_carnet is not null and btrim(numero_carnet) <> '';
 
 create or replace function public.actualizar_updated_at()
 returns trigger
