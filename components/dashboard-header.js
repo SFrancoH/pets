@@ -16,6 +16,7 @@ export default function DashboardHeader({ profile, context, active }) {
         <Link className={active === "panel" ? "active" : ""} href="/panel">Resumen</Link>
         <Link className={active === "mascotas" ? "active" : ""} href="/mascotas">Mascotas</Link>
         <Link className={active === "propietarios" ? "active" : ""} href="/propietarios">Propietarios</Link>
+        <Link className={active === "registro" ? "active" : ""} href="/registros/nuevo">Nuevo registro</Link>
         {isSuperAdmin ? (
           <Link className={active === "empresas" ? "active" : ""} href="/super-admin">Empresas</Link>
         ) : null}

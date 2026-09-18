@@ -75,6 +75,7 @@ export default async function PetsPage({ searchParams }) {
             <p className="description">Consulta la base de mascotas y abre cada ficha clínica.</p>
           </div>
           <div className="listActions">
+            <Link className="actionLink" href="/registros/nuevo">Nueva mascota</Link>
             <Link className="actionLink" href="/api/export/mascotas">Descargar Excel</Link>
             {profile.rol === "super_admin" ? (
               <details className="uploadPanel">

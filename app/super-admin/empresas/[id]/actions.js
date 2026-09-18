@@ -114,3 +114,33 @@ export async function setCompanyUserStatus(formData) {
   revalidatePath(companyPath(companyId));
   redirect(companyPath(companyId, "?ok=estado"));
 }
+
+export async function saveContactIntegration(formData) {
+  const actor = await requireProfile(["super_admin"]);
+  const companyId = String(formData.get("empresa_id") || "");
+  const formUrl = String(formData.get("formulario_url") || "").trim();
+  const active = String(formData.get("activa")) === "on";
+
+  if (!uuidPattern.test(companyId)) redirect("/super-admin");
+
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(formUrl);
+  } catch {
+    redirect(companyPath(companyId, "?error=integracion"));
+  }
+  if (parsedUrl.protocol !== "https:") redirect(companyPath(companyId, "?error=integracion"));
+
+  const admin = getSupabaseAdmin();
+  const { error } = await admin.from("integraciones_contacto").upsert({
+    empresa_id: companyId,
+    formulario_url: parsedUrl.toString(),
+    activa: active,
+    creada_por: actor.id,
+    actualizada_por: actor.id
+  }, { onConflict: "empresa_id" });
+
+  if (error) redirect(companyPath(companyId, "?error=integracion"));
+  revalidatePath(companyPath(companyId));
+  redirect(companyPath(companyId, "?ok=integracion"));
+}
