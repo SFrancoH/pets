@@ -3,6 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import {
+  administrationRoutes,
+  medicationFrequencies,
+  medications,
+  procedureTypes
+} from "@/lib/clinical-catalogs";
 import { requireOperationalProfile } from "@/lib/operational";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -10,6 +16,11 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}
 const serviceTypes = new Set(["Consulta", "Control"]);
 const foodTypes = new Set(["Concentrado", "Dieta BARF", "Enlatado", "Otro"]);
 const stoolTypes = new Set(["Normal", "Blando", "Pastoso", "Líquido", "Otro"]);
+const procedureAreas = new Set(["Medicación", "Hospitalización"]);
+const allowedProcedureTypes = new Set(procedureTypes);
+const allowedMedications = new Set(medications);
+const allowedAdministrationRoutes = new Set(administrationRoutes);
+const allowedMedicationFrequencies = new Set(medicationFrequencies);
 const systemKeys = [
   "organos_sentidos",
   "ganglios_linfaticos",
@@ -34,6 +45,56 @@ function number(formData, name, integer = false) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) return null;
   return integer ? Math.trunc(parsed) : parsed;
+}
+
+function safeText(value, maxLength = 1000) {
+  const normalized = String(value || "").trim();
+  return normalized ? normalized.slice(0, maxLength) : null;
+}
+
+function parseMedicationRows(value) {
+  try {
+    const parsed = JSON.parse(String(value || "[]"));
+    if (!Array.isArray(parsed) || parsed.length < 1 || parsed.length > 20) return null;
+
+    const rows = parsed.map((item) => {
+      const medicamento = safeText(item?.medicamento, 200);
+      const medicamentoOtro = safeText(item?.medicamento_otro, 200);
+      const dosis = safeText(item?.dosis_terapeutica, 500);
+      const via = safeText(item?.via_administracion, 50);
+      const viaOtra = safeText(item?.via_administracion_otra, 200);
+      const frecuencia = safeText(item?.frecuencia, 50);
+      const frecuenciaOtra = safeText(item?.frecuencia_otra, 200);
+      const cantidad = Number(String(item?.cantidad_total || "").replace(",", "."));
+
+      if (
+        !allowedMedications.has(medicamento)
+        || (medicamento === "Otro" && !medicamentoOtro)
+        || !dosis
+        || !allowedAdministrationRoutes.has(via)
+        || (via === "Otra" && !viaOtra)
+        || !allowedMedicationFrequencies.has(frecuencia)
+        || (frecuencia === "Otra" && !frecuenciaOtra)
+        || !Number.isFinite(cantidad)
+        || cantidad <= 0
+      ) return null;
+
+      return {
+        medicamento,
+        medicamento_otro: medicamento === "Otro" ? medicamentoOtro : null,
+        dosis_terapeutica: dosis,
+        via_administracion: via,
+        via_administracion_otra: via === "Otra" ? viaOtra : null,
+        frecuencia,
+        frecuencia_otra: frecuencia === "Otra" ? frecuenciaOtra : null,
+        cantidad_total: cantidad
+      };
+    });
+
+    return rows.some((row) => row === null) ? null : rows;
+  } catch {
+    return null;
+  }
 }
 
 export async function createConsultation(petId, formData) {
@@ -68,6 +129,24 @@ export async function createConsultation(petId, formData) {
 
     const foodType = text(formData, "tipo_alimento", 30);
     const stoolType = text(formData, "heces", 20);
+    const proceduresEnabled = formData.get("procedimientos_habilitados") === "si";
+    const procedureArea = text(formData, "area_consulta", 50);
+    const selectedProcedureTypes = formData
+      .getAll("tipos_procedimiento")
+      .map((value) => String(value))
+      .filter((value) => allowedProcedureTypes.has(value));
+    if (proceduresEnabled && !procedureAreas.has(procedureArea)) {
+      redirect(`/mascotas/${petId}?modulo=consulta-control&vista=nueva&error=procedimientos`);
+    }
+
+    const homeTreatmentSelected = selectedProcedureTypes.includes("Tratamiento farmacológico en casa");
+    const medicationRows = homeTreatmentSelected
+      ? parseMedicationRows(formData.get("formula_medicamentos"))
+      : [];
+    if (homeTreatmentSelected && !medicationRows) {
+      redirect(`/mascotas/${petId}?modulo=consulta-control&vista=nueva&error=formula`);
+    }
+
     const systems = {};
     systemKeys.forEach((key) => {
       const status = text(formData, `sistema_${key}_estado`, 10) === "Anormal" ? "Anormal" : "Normal";
@@ -106,7 +185,13 @@ export async function createConsultation(petId, formData) {
       diagnostico_presuntivo: text(formData, "diagnostico_presuntivo"),
       examenes_laboratorio: text(formData, "examenes_laboratorio"),
       imagenes_diagnosticas: text(formData, "imagenes_diagnosticas"),
-      procedimientos: text(formData, "procedimientos"),
+      procedimientos_habilitados: proceduresEnabled,
+      area_consulta: proceduresEnabled ? procedureArea : null,
+      tipos_procedimiento: proceduresEnabled ? selectedProcedureTypes : [],
+      valor_total_servicio: proceduresEnabled ? number(formData, "valor_total_servicio") : null,
+      observaciones_procedimiento: proceduresEnabled ? text(formData, "observaciones_procedimiento") : null,
+      formula_descripcion: homeTreatmentSelected ? text(formData, "formula_descripcion") : null,
+      formula_medicamentos: medicationRows || [],
       diagnostico_definitivo: text(formData, "diagnostico_definitivo"),
       tratamiento: text(formData, "tratamiento"),
       pronostico: text(formData, "pronostico"),
@@ -116,7 +201,30 @@ export async function createConsultation(petId, formData) {
       medico_registra_nombre: actor.nombre
     };
 
-    const { error } = await admin.from("consultas_controles").insert(row);
+    let { error } = await admin.from("consultas_controles").insert(row);
+    const missingProcedureSchema = error && (
+      error.code === "PGRST204"
+      || /procedimientos_habilitados|formula_medicamentos|area_consulta/i.test(error.message || "")
+    );
+
+    if (missingProcedureSchema) {
+      if (proceduresEnabled) {
+        redirect(`/mascotas/${petId}?modulo=consulta-control&vista=nueva&error=actualizar_bd`);
+      }
+
+      const legacyRow = { ...row };
+      [
+        "procedimientos_habilitados",
+        "area_consulta",
+        "tipos_procedimiento",
+        "valor_total_servicio",
+        "observaciones_procedimiento",
+        "formula_descripcion",
+        "formula_medicamentos"
+      ].forEach((key) => delete legacyRow[key]);
+      ({ error } = await admin.from("consultas_controles").insert(legacyRow));
+    }
+
     if (error) throw error;
 
     revalidatePath(`/mascotas/${petId}`);

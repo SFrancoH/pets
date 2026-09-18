@@ -832,6 +832,196 @@ button:hover {
   min-height: 72px;
 }
 
+.procedureBlockContent {
+  display: grid;
+  gap: 20px;
+}
+
+.procedureToggle,
+.procedureChoices {
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+}
+
+.procedureToggle legend,
+.procedureChoices legend {
+  padding: 0 6px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.procedureMetaGrid {
+  align-items: end;
+}
+
+.procedureChoiceGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 18px;
+}
+
+.procedureChoiceGrid label {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  cursor: pointer;
+  line-height: 1.35;
+}
+
+.procedureToggle input,
+.procedureChoiceGrid input {
+  width: 17px;
+  min-width: 17px;
+  min-height: 17px;
+  height: 17px;
+  margin: 1px 0 0;
+  accent-color: var(--green);
+}
+
+.prescriptionCard {
+  overflow: hidden;
+  border: 1px solid #b9d8eb;
+  border-radius: 16px;
+  background: white;
+}
+
+.prescriptionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 20px;
+  color: white;
+  background: #0875f5;
+}
+
+.prescriptionHeading .eyebrow {
+  margin: 0 0 3px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.prescriptionHeading h3 {
+  margin: 0;
+  color: white;
+  font-size: 23px;
+}
+
+.prescriptionHeading > span {
+  font-size: 13px;
+  text-align: right;
+}
+
+.prescriptionPatientGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  padding: 20px 20px 0;
+}
+
+.prescriptionDescription {
+  padding: 18px 20px 0;
+}
+
+.medicationList {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+
+.medicationRow {
+  padding: 16px;
+  border: 1px solid #d9e3dd;
+  border-radius: 13px;
+  background: #f8faf9;
+}
+
+.medicationRowHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 13px;
+}
+
+.medicationRowHeading strong {
+  color: var(--green);
+}
+
+.medicationFields {
+  display: grid;
+  grid-template-columns: 1.6fr repeat(4, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.removeMedicationButton,
+.addMedicationButton {
+  min-height: 38px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.removeMedicationButton {
+  color: #a52d26;
+  background: #fff0ef;
+}
+
+.addMedicationButton {
+  width: max-content;
+  margin: 0 20px 20px;
+}
+
+.procedureHistory {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid #cfe0e9;
+  border-radius: 13px;
+  background: #f8fcfe;
+}
+
+.procedureHistory h3,
+.prescriptionHistory h4 {
+  margin: 0;
+}
+
+.prescriptionHistory {
+  display: grid;
+  gap: 12px;
+  padding-top: 2px;
+}
+
+.prescriptionHistory > p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.medicationHistoryList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.medicationHistoryList article {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: white;
+  font-size: 13px;
+}
+
+.medicationHistoryList article strong {
+  color: var(--green);
+}
+
 .registeredDoctor {
   margin: 18px 0 0;
   color: var(--muted);
@@ -1385,8 +1575,24 @@ button:hover {
 
   .patientDataBlock,
   .formGrid,
-  .systemsGrid {
+  .systemsGrid,
+  .procedureChoiceGrid,
+  .prescriptionPatientGrid,
+  .medicationFields {
     grid-template-columns: 1fr;
+  }
+
+  .prescriptionHeading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .prescriptionHeading > span {
+    text-align: left;
+  }
+
+  .addMedicationButton {
+    width: calc(100% - 40px);
   }
 
   .fullField {

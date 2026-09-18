@@ -19,7 +19,7 @@ export default async function PetDetailPage({ params, searchParams }) {
   const { data: pet } = await query.maybeSingle();
   if (!pet) notFound();
 
-  const [veterinariansResult, consultationsResult] = await Promise.all([
+  const [veterinariansResult, consultationsResult, procedureSchemaResult] = await Promise.all([
     admin
       .from("usuarios")
       .select("id, nombre, rol, empresa_id")
@@ -32,7 +32,11 @@ export default async function PetDetailPage({ params, searchParams }) {
       .select("*")
       .eq("empresa_id", pet.empresa_id)
       .eq("mascota_id", pet.id)
-      .order("fecha_registro", { ascending: false })
+      .order("fecha_registro", { ascending: false }),
+    admin
+      .from("consultas_controles")
+      .select("procedimientos_habilitados")
+      .limit(1)
   ]);
   const veterinarians = [...(veterinariansResult.data || [])];
   if (profile.rol === "super_admin" && !veterinarians.some((vet) => vet.id === profile.id)) {
@@ -90,12 +94,14 @@ export default async function PetDetailPage({ params, searchParams }) {
             fecha_nacimiento_formateada: formatDate(pet.fecha_nacimiento),
             estado_reproductivo: pet.estado_reproductivo,
             color: pet.color,
-            peso_kg: pet.peso_kg
+            peso_kg: pet.peso_kg,
+            propietarios: owners.map((owner) => owner.nombre)
           }}
           veterinarians={veterinarians}
           actor={{ id: profile.id, nombre: profile.nombre, rol: profile.rol }}
           consultations={consultations}
           historyAvailable={historyAvailable}
+          procedureSchemaReady={!procedureSchemaResult.error}
           recordedAt={new Date().toISOString()}
           initialModule={queryParams?.modulo === "consulta-control" ? "consulta-control" : "historia"}
           initialView={queryParams?.vista === "nueva" ? "new" : "history"}
