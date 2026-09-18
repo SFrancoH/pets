@@ -167,6 +167,29 @@ h1 {
   gap: 18px;
 }
 
+.embeddedLoginNotice {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 15px;
+  border: 1px solid #bdd8e8;
+  border-radius: 13px;
+  color: #174d6b;
+  background: #eef8fd;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.embeddedLoginNotice p {
+  margin: 0;
+}
+
+.embeddedLoginNotice a {
+  width: max-content;
+  color: #075f91;
+  font-weight: 850;
+}
+
 .authForm label {
   display: grid;
   gap: 8px;

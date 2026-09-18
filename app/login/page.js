@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import EmbeddedLoginHelper from "@/components/embedded-login-helper";
 import PasswordField from "@/components/password-field";
 import { getCurrentProfile } from "@/lib/auth";
 import { login } from "./actions";
@@ -28,6 +29,7 @@ export default async function LoginPage({ searchParams }) {
         </p>
 
         {message ? <div className="formAlert">{message}</div> : null}
+        <EmbeddedLoginHelper />
 
         <form action={login} className="authForm">
           <label>
