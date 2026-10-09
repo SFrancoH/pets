@@ -5,7 +5,7 @@ import { sedes, especies, razas, temperamentos, estadosReproductivos, tamanos, e
 import DashboardHeader from "@/components/dashboard-header";
 import { requireOperationalProfile } from "@/lib/operational";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { createPendingPetRegistration } from "./actions";
+import { createPetRegistration } from "./actions";
 
 const documentTypes = [
   "Cédula de ciudadania",
