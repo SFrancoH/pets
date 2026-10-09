@@ -149,7 +149,9 @@ export async function createConsultation(petId, formData) {
 
     const systems = {};
     systemKeys.forEach((key) => {
-      const status = text(formData, `sistema_${key}_estado`, 10) === "Anormal" ? "Anormal" : "Normal";
+      const status = text(formData, `sistema_${key}_estado`, 20);
+      // No registrar como normal un sistema que el veterinario no evaluó.
+      if (status !== "Normal" && status !== "Anormal") return;
       systems[key] = {
         estado: status,
         detalle: status === "Anormal" ? text(formData, `sistema_${key}_detalle`, 2000) : null
