@@ -42,7 +42,7 @@ function ownerIdentity(owner) {
 }
 
 function mergeMissing(target, source) {
-  for (const field of ["ciudad", "direccion", "telefono", "whatsapp", "email", "tipo_documento", "numero_documento"]) {
+  for (const field of ["ciudad", "direccion", "telefono", "whatsapp", "email", "tipo_documento", "numero_documento", "fuente"]) {
     if (!target[field] && source[field]) target[field] = source[field];
   }
   target.notificaciones_whatsapp ||= source.notificaciones_whatsapp;
@@ -94,6 +94,7 @@ export async function importOwners(formData) {
         email,
         tipo_documento: textValue(pick(source, ["tipo_documento", "tipo de documento"])),
         numero_documento: document,
+        fuente: textValue(pick(source, ["fuente", "sede"])),
         estado: textValue(pick(source, ["estado"])) || "Activo",
         notificaciones_whatsapp: booleanValue(pick(source, ["notificaciones_whatsapp", "notificacion de whatsapp"])),
         tags: String(pick(source, ["tags", "tag"]) || "").split(/[,;|]/).map((value) => value.trim()).filter(Boolean),
