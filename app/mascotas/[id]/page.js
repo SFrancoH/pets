@@ -25,28 +25,39 @@ export default async function PetDetailPage({ params, searchParams }) {
   const datePattern = /^\d{4}-\d{2}-\d{2}$/;
   const historyFrom = datePattern.test(queryParams?.desde || "") ? queryParams.desde : "";
   const historyTo = datePattern.test(queryParams?.hasta || "") ? queryParams.hasta : "";
-  let historyQuery = admin.from("consultas_controles")
-    .select("*", { count: "exact" }).eq("empresa_id", pet.empresa_id).eq("mascota_id", pet.id);
-  if (historyOpen && historyFrom) historyQuery = historyQuery.gte("fecha_registro", `${historyFrom}T00:00:00-05:00`);
-  if (historyOpen && historyTo) historyQuery = historyQuery.lte("fecha_registro", `${historyTo}T23:59:59.999-05:00`);
-  const limit = historyOpen ? 50 : 1;
-  const offset = historyOpen ? (historyPage - 1) * limit : 0;
-  const [veterinariansResult, consultationsResult, procedureSchemaResult, latestResult, latestProcedureResult, latestFormulaResult] = await Promise.all([
+  // Una consulta como máximo para la pestaña de consulta y control.
+  const recentConsultationQuery = admin.from("consultas_controles")
+    .select("*").eq("empresa_id", pet.empresa_id).eq("mascota_id", pet.id)
+    .order("fecha_registro", { ascending: false }).order("id", { ascending: false }).limit(1);
+  let eventsQuery = admin.from("eventos_mascota")
+    .select("id, modulo, consulta_id, fecha_registro, resumen", { count: "exact" })
+    .eq("empresa_id", pet.empresa_id).eq("mascota_id", pet.id);
+  if (historyFrom) eventsQuery = eventsQuery.gte("fecha_registro", `${historyFrom}T00:00:00-05:00`);
+  if (historyTo) eventsQuery = eventsQuery.lte("fecha_registro", `${historyTo}T23:59:59.999-05:00`);
+  const pageLimit = 50;
+  const offset = (historyPage - 1) * pageLimit;
+  const [veterinariansResult, consultationsResult, procedureSchemaResult, latestModulesResult, eventsResult] = await Promise.all([
     admin.from("usuarios").select("id, nombre, rol, empresa_id")
       .eq("empresa_id", pet.empresa_id).eq("rol", "veterinario")
       .eq("activo", true).order("nombre"),
-    historyQuery.order("fecha_registro", { ascending: false }).order("id", { ascending: false })
-      .range(offset, offset + limit - 1),
+    recentConsultationQuery,
     admin.from("consultas_controles").select("procedimientos_habilitados").limit(1),
-    admin.from("consultas_controles").select("*").eq("empresa_id", pet.empresa_id)
-      .eq("mascota_id", pet.id).order("fecha_registro", { ascending: false }).limit(1),
-    admin.from("consultas_controles").select("*").eq("empresa_id", pet.empresa_id)
-      .eq("mascota_id", pet.id).eq("procedimientos_habilitados", true)
-      .order("fecha_registro", { ascending: false }).limit(1),
-    admin.from("consultas_controles").select("*").eq("empresa_id", pet.empresa_id)
-      .eq("mascota_id", pet.id).contains("tipos_procedimiento", ["Tratamiento farmacológico en casa"])
-      .order("fecha_registro", { ascending: false }).limit(1)
+    admin.rpc("ultimos_eventos_mascota_pets", { p_empresa_id: pet.empresa_id, p_mascota_id: pet.id }),
+    historyOpen
+      ? eventsQuery.order("fecha_registro", { ascending: false }).order("id", { ascending: false })
+          .range(offset, offset + pageLimit - 1)
+      : Promise.resolve({ data: [], count: 0, error: null })
   ]);
+  const loadedEvents = eventsResult.data || [];
+  const consultationIds = [...new Set(loadedEvents.map((event) => event.consulta_id).filter(Boolean))];
+  const relatedResult = consultationIds.length
+    ? await admin.from("consultas_controles").select("*").eq("empresa_id", pet.empresa_id)
+        .eq("mascota_id", pet.id).in("id", consultationIds)
+    : { data: [], error: null };
+  const consultationsById = new Map((relatedResult.data || []).map((item) => [item.id, item]));
+  const historyEntries = loadedEvents.map((event) => ({
+    ...event, consulta: consultationsById.get(event.consulta_id) || null
+  }));
   const veterinarians = [...(veterinariansResult.data || [])];
   if (profile.rol === "super_admin" && !veterinarians.some((vet) => vet.id === profile.id)) {
     veterinarians.unshift({
@@ -111,12 +122,13 @@ export default async function PetDetailPage({ params, searchParams }) {
           veterinarians={veterinarians}
           actor={{ id: profile.id, nombre: profile.nombre, rol: profile.rol }}
           consultations={consultations}
-          latestConsultation={latestResult.data?.[0] || null}
-          latestProcedure={latestProcedureResult.data?.[0] || null}
-          latestFormula={latestFormulaResult.data?.[0] || null}
+          latestConsultation={consultations[0] || null}
+          latestModules={latestModulesResult.data || []}
+          historyEntries={historyEntries}
+          eventSchemaReady={!latestModulesResult.error && !eventsResult.error && !relatedResult.error}
           historyOpen={historyOpen}
           historyPage={historyPage}
-          historyTotal={consultationsResult.count || 0}
+          historyTotal={eventsResult.count || 0}
           historyFrom={historyFrom}
           historyTo={historyTo}
           historyAvailable={historyAvailable}
