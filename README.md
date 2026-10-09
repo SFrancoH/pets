@@ -16,7 +16,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 
 ## Base de datos
 
-Ejecuta las migraciones de `supabase/migrations` en orden numérico (001–008) en el SQL Editor de Supabase. Las migraciones 006, 007 y 008 habilitan el registro nativo transaccional, el historial unificado con paginación y la auditoría de ediciones. Deben estar aplicadas **antes** de usar esas funciones en la aplicación.
+Ejecuta las migraciones de `supabase/migrations` en orden numérico (001–009) en el SQL Editor de Supabase. Las migraciones 006, 007, 008 y 009 habilitan el registro nativo transaccional, el historial unificado con paginación y la auditoría de ediciones. Deben estar aplicadas **antes** de usar esas funciones en la aplicación.
 
 La documentación operativa, las decisiones, el historial de cambios y los pendientes están en [docs/BITACORA_PETS.md](docs/BITACORA_PETS.md). El antiguo documento de formulario externo se conserva exclusivamente como referencia histórica.
 
@@ -29,3 +29,5 @@ npm run build
 ```
 
 La ruta `/api/health/supabase` valida la conexión sin devolver datos, nombres de tablas ni credenciales.
+
+Para **Agregar otro propietario** desde la ficha de una mascota, ejecutar también `supabase/migrations/009_asociar_propietario_mascota.sql`; añade una función de asociación por documento/teléfono con prevención de duplicados y no crea tablas nuevas.
