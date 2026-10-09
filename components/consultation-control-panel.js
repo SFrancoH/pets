@@ -214,7 +214,7 @@ function ProcedureBlock({ pet, actor, recordedAt, initial = {} }) {
                     <p className="eyebrow">Tratamiento farmacológico en casa</p>
                     <h3 id="prescription-title">Registrar fórmula</h3>
                   </div>
-                  <span>Médico veterinario: <strong>{actor.nombre}</strong></span>
+                  <span>Médico veterinario: <strong>{initial.medico_registra_nombre || actor.nombre}</strong></span>
                 </div>
 
                 <div className="prescriptionPatientGrid">
@@ -398,7 +398,7 @@ function ClinicalForm({
           <p className="eyebrow">Historia clínica</p>
           <h2>{readOnly ? "Historia clínica registrada" : initialConsultation ? "Editar consulta o control" : "Nueva consulta o control"}</h2>
           <p>Fecha de registro: <strong>{formatDateTime(recordedAt)}</strong></p>
-          <p>Completa únicamente los apartados evaluados. Los campos clínicos no diligenciados son opcionales.</p>
+          <p>{readOnly ? "Registro de solo lectura. Pulsa Editar consulta para modificarlo." : "Completa únicamente los apartados evaluados. Los campos clínicos no diligenciados son opcionales."}</p>
         </div>
         {!readOnly ? <button className="buttonSecondary" type="button" onClick={onCancel}>Cancelar</button> : null}
       </div>
@@ -592,8 +592,8 @@ function ClinicalForm({
               <label><input type="radio" name="habilitar_observacion" value="no" checked={observation === "no"} onChange={() => setObservation("no")} />No</label>
             </div>
           </fieldset>
-          <p className="registeredDoctor">Profesional que registra la historia clínica: <strong>{actor.nombre}</strong></p>
-          {observation === "si" ? <div className="responsibilityNotice">{responsibilityText(actor.nombre)}</div> : null}
+          <p className="registeredDoctor">Profesional que registra la historia clínica: <strong>{initial.medico_registra_nombre || actor.nombre}</strong></p>
+          {observation === "si" ? <div className="responsibilityNotice">{responsibilityText(initial.medico_registra_nombre || actor.nombre)}</div> : null}
         </div>
       </details>
 
