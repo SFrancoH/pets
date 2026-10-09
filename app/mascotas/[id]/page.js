@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import ConsultationControlPanel from "@/components/consultation-control-panel";
 import DashboardHeader from "@/components/dashboard-header";
+import PetEditForm from "@/components/pet-edit-form";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { formatDate, requireOperationalProfile } from "@/lib/operational";
 
@@ -56,6 +57,7 @@ export default async function PetDetailPage({ params, searchParams }) {
     ["Raza", pet.raza],
     ["Sexo", pet.sexo],
     ["Peso", pet.peso_kg !== null ? `${pet.peso_kg} kg` : null],
+    ["Tamaño", pet.tamano],
     ["Fecha de nacimiento", formatDate(pet.fecha_nacimiento)],
     ["Color", pet.color],
     ["Temperamento", pet.temperamento],
@@ -80,7 +82,7 @@ export default async function PetDetailPage({ params, searchParams }) {
             <p className="description">SEDE: {pet.fuente || "Sin sede registrada"}</p>
           </div>
           <span className={pet.fecha_fallecimiento ? "badgeInactive" : "badgeActive"}>
-            {pet.fecha_fallecimiento ? "Fallecido" : pet.estado || "Activo"}
+            {pet.estado || (pet.fecha_fallecimiento ? "Fallecido" : "Activo")}
           </span>
         </div>
 
@@ -119,6 +121,8 @@ export default async function PetDetailPage({ params, searchParams }) {
             ))}
           </dl>
         </section>
+
+        <PetEditForm pet={pet} editing={queryParams?.editar === "1"} error={queryParams?.error_perfil === "1"} success={queryParams?.perfil_actualizado === "1"} />
 
         <section className="recordSection">
           <p className="eyebrow">Relaciones</p>
