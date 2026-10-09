@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import CarnetGenerator from "@/components/carnet-generator";
-import { sedes, especies, razas, temperamentos, estadosReproductivos, tamanos } from "@/lib/pet-catalogs";
+import { sedes, especies, razas, temperamentos, estadosReproductivos, tamanos, estadosMascota } from "@/lib/pet-catalogs";
 import DashboardHeader from "@/components/dashboard-header";
 import { requireOperationalProfile } from "@/lib/operational";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -89,6 +89,7 @@ export default async function NewRegistrationPage({ searchParams }) {
               <label>Estado reproductivo<select name="estado_reproductivo" defaultValue=""><option value="">Selecciona una opción</option>{estadosReproductivos.map((v) => <option key={v} value={v}>{v}</option>)}</select></label>
               <label>Número de partos<input name="numero_partos" type="number" min="0" step="1" /></label>
               <label>Tamaño<select name="tamano" defaultValue=""><option value="">Selecciona una opción</option>{tamanos.map((v) => <option key={v} value={v}>{v}</option>)}</select></label>
+              <label>Estado<select name="estado" defaultValue="Activo">{estadosMascota.map((v) => <option key={v} value={v}>{v}</option>)}</select></label>
               <label className="carnetField">Número de carnet<div><input id="numero_carnet" name="numero_carnet" inputMode="numeric" pattern="[0-9]{14}" maxLength={14} required /><CarnetGenerator /></div><small>Formato automático: día, mes, año, hora, minuto y segundo de Bogotá.</small></label>
             </div>
           </section>
