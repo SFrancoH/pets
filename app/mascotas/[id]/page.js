@@ -20,24 +20,32 @@ export default async function PetDetailPage({ params, searchParams }) {
   const { data: pet } = await query.maybeSingle();
   if (!pet) notFound();
 
-  const [veterinariansResult, consultationsResult, procedureSchemaResult] = await Promise.all([
-    admin
-      .from("usuarios")
-      .select("id, nombre, rol, empresa_id")
-      .eq("empresa_id", pet.empresa_id)
-      .eq("rol", "veterinario")
-      .eq("activo", true)
-      .order("nombre"),
-    admin
-      .from("consultas_controles")
-      .select("*")
-      .eq("empresa_id", pet.empresa_id)
-      .eq("mascota_id", pet.id)
-      .order("fecha_registro", { ascending: false }),
-    admin
-      .from("consultas_controles")
-      .select("procedimientos_habilitados")
-      .limit(1)
+  const historyOpen = queryParams?.historial === "1";
+  const historyPage = Math.max(1, Number.parseInt(queryParams?.pagina || "1", 10) || 1);
+  const datePattern = /^\\d{4}-\\d{2}-\\d{2}$/;
+  const historyFrom = datePattern.test(queryParams?.desde || "") ? queryParams.desde : "";
+  const historyTo = datePattern.test(queryParams?.hasta || "") ? queryParams.hasta : "";
+  let historyQuery = admin.from("consultas_controles")
+    .select("*", { count: "exact" }).eq("empresa_id", pet.empresa_id).eq("mascota_id", pet.id);
+  if (historyOpen && historyFrom) historyQuery = historyQuery.gte("fecha_registro", `${historyFrom}T00:00:00-05:00`);
+  if (historyOpen && historyTo) historyQuery = historyQuery.lte("fecha_registro", `${historyTo}T23:59:59.999-05:00`);
+  const limit = historyOpen ? 50 : 1;
+  const offset = historyOpen ? (historyPage - 1) * limit : 0;
+  const [veterinariansResult, consultationsResult, procedureSchemaResult, latestResult, latestProcedureResult, latestFormulaResult] = await Promise.all([
+    admin.from("usuarios").select("id, nombre, rol, empresa_id")
+      .eq("empresa_id", pet.empresa_id).eq("rol", "veterinario")
+      .eq("activo", true).order("nombre"),
+    historyQuery.order("fecha_registro", { ascending: false }).order("id", { ascending: false })
+      .range(offset, offset + limit - 1),
+    admin.from("consultas_controles").select("procedimientos_habilitados").limit(1),
+    admin.from("consultas_controles").select("*").eq("empresa_id", pet.empresa_id)
+      .eq("mascota_id", pet.id).order("fecha_registro", { ascending: false }).limit(1),
+    admin.from("consultas_controles").select("*").eq("empresa_id", pet.empresa_id)
+      .eq("mascota_id", pet.id).eq("procedimientos_habilitados", true)
+      .order("fecha_registro", { ascending: false }).limit(1),
+    admin.from("consultas_controles").select("*").eq("empresa_id", pet.empresa_id)
+      .eq("mascota_id", pet.id).contains("tipos_procedimiento", ["Tratamiento farmacológico en casa"])
+      .order("fecha_registro", { ascending: false }).limit(1)
   ]);
   const veterinarians = [...(veterinariansResult.data || [])];
   if (profile.rol === "super_admin" && !veterinarians.some((vet) => vet.id === profile.id)) {
@@ -103,6 +111,14 @@ export default async function PetDetailPage({ params, searchParams }) {
           veterinarians={veterinarians}
           actor={{ id: profile.id, nombre: profile.nombre, rol: profile.rol }}
           consultations={consultations}
+          latestConsultation={latestResult.data?.[0] || null}
+          latestProcedure={latestProcedureResult.data?.[0] || null}
+          latestFormula={latestFormulaResult.data?.[0] || null}
+          historyOpen={historyOpen}
+          historyPage={historyPage}
+          historyTotal={consultationsResult.count || 0}
+          historyFrom={historyFrom}
+          historyTo={historyTo}
           historyAvailable={historyAvailable}
           procedureSchemaReady={!procedureSchemaResult.error}
           recordedAt={new Date().toISOString()}
