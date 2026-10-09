@@ -258,3 +258,33 @@ order by ordinal_position;
 ### Regla para el despliegue
 
 No desplegar frontend ni acciones que dependan de `tamano`, `registrar_propietario_mascota_pets`, `eventos_mascota`, `ultimos_eventos_mascota_pets`, `ultima_edicion_por` o `auditoria_ediciones_pets` antes de aplicar y verificar las migraciones 006–008. Todas las funciones con `SECURITY DEFINER` quedan ejecutables solo con `service_role` y las claves secretas permanecen exclusivamente en servidor.
+
+
+## 12. Correcciones — 2026-10-09 — desplegables, visualización de SEDE y migración 007
+
+### SQL 007: error PostgreSQL 42601 en línea 97
+- **Detectado:** la función `ultimos_eventos_mascota_pets` tenía `as $` / `$;` (delimitadores inválidos).
+- **Solución implementada:** usar delimitadores coincidentes `as $pets_recent$` y `$pets_recent$;` en `supabase/migrations/007_historial_unificado.sql`.
+- **Motivo:** SQL inválido en el archivo subido; PostgreSQL rechazaba el script. El código de la función `sincronizar_eventos_consulta` anterior usa delimitadores válidos `$$`.
+- **Estado:** CORREGIDO EN GITHUB. PENDIENTE ejecutar script completo en Supabase y comprobar tablas, función y backfill. La migración está envuelta en transacción y está diseñada para poder reintentarse.
+
+### Formularios: precisión de catálogos
+- **Revisión:** los select de Nuevo registro (`app/registros/nuevo/page.js`) y Edición de mascota (`components/pet-edit-form.js`) ya importaban los catálogos, pero tenían dos valores diferentes a los solicitados.
+- **Cambio:** dividir `Castrado / Esterilizado` en opciones independientes `Castrado` y `Esterilizado`; usar `independiente` en la opción de temperamento. Persisten `Entero`, `Desconocido` y el resto de los catálogos ya configurados.
+- **Compatibilidad:** la edición conserva el valor histórico si no está entre las opciones nuevas (p.ej. `Castrado / Esterilizado`).
+- **Motivo de riesgo:** si los selects siguen sin verse en la app desplegada pese a estar en la rama principal, verificar que el despliegue de Vercel corresponde a `main` actualizado. No se ha podido inspeccionar el despliegue en vivo.
+- **Estado:** CORREGIDO EN GITHUB; interfaz desplegada no verificada.
+
+### SEDE: lectura del campo `fuente`
+- **Revisión:** las consultas de listas y fichas leen `fuente` (singular); ese es el nombre correcto según el DDL de Supabase compartido. No debe sustituirse por `empresas.nombre`.
+- **Corrección:** helper `lib/sede-display.js` para mostrar el valor de `fuente` sin inventarlo; celdas sin valor indican `Sin sede registrada`. Las listas de mascotas/propietarios ahora exhiben un error visible si falla la lectura del backend en lugar de aparentar una tabla vacía. Las fichas registran el error de Supabase y no lo confunden con un registro inexistente.
+- **Requisito de comprobación de datos:** comprobar valores agrupados de `fuente` tanto en `mascotas` como en `propietarios`; añadir la columna con `ALTER TABLE` no rellena los registros antiguos.
+- **No hacer:** asignar `SEDE SUR` o `SEDE NORTE` automáticamente a todas las filas nulas, ni copiar la sede del propietario a una mascota sin verificar la correspondencia.
+- **Estado:** CORREGIDO EN GITHUB. PENDIENTE inspección de valores reales y deploy.
+
+### Verificación y seguimiento
+- Verificar SQL 007 completo en el editor Supabase, incluida su función en líneas 93–102.
+- Revisar carga de módulos, filtros y cronología de la mascota después de la migración.
+- Crear propietario/mascota desde formulario para verificar nuevos valores de dropdown y `fuente`.
+- Consultar datos actuales mediante agregación `GROUP BY fuente` sin exponer PII y comparar lo almacenado con la UI.
+- Recompilar y validar que Vercel desplegó el último commit de `main`.
