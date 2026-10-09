@@ -11,6 +11,7 @@ import {
   sanitizeSearch
 } from "@/lib/operational";
 import { importPets } from "./actions";
+import { mostrarSede } from "@/lib/sede-display";
 
 export const maxDuration = 60;
 
@@ -49,10 +50,11 @@ export default async function PetsPage({ searchParams }) {
     query = query.or(`nombre.ilike.%${q}%,numero_carnet.ilike.%${q}%,raza.ilike.%${q}%,especie.ilike.%${q}%`);
   }
 
-  const { data: pets = [], count = 0 } = await query
+  const { data: pets = [], count = 0, error: petsError } = await query
     .order(sort, { ascending: dir === "asc", nullsFirst: false })
     .range(offset, offset + limit - 1);
 
+  if (petsError) console.error("Error al leer mascotas", { code: petsError.code, message: petsError.message });
   const companies = profile.rol === "super_admin"
     ? (await admin.from("empresas").select("id, nombre").eq("activa", true).order("nombre")).data || []
     : [];
@@ -130,6 +132,7 @@ export default async function PetsPage({ searchParams }) {
           </form>
         </div>
 
+        {petsError ? <div className="formAlert">No fue posible cargar las mascotas desde Supabase. Revisa la conexión y el campo fuente.</div> : null}
         <div className="dataTableWrap">
           <table className="dataTable">
             <thead>
@@ -160,7 +163,7 @@ export default async function PetsPage({ searchParams }) {
                       <span key={owner.id}>{index ? ", " : ""}<Link href={`/propietarios/${owner.id}`}>{owner.nombre}</Link></span>
                     )) : "Sin asociar"}</td>
                     <td>{owners.map((owner) => owner.whatsapp || owner.telefono).filter(Boolean).join(" - ") || "—"}</td>
-                    <td>{pet.fuente || "—"}</td>
+                    <td>{mostrarSede(pet.fuente)}</td>
                     <td>{pet.estado || (pet.fecha_fallecimiento ? "Fallecido" : "Activo")}</td>
                     <td><Link className="tableAction" href={`/mascotas/${pet.id}`}>Ver ficha</Link></td>
                   </tr>
