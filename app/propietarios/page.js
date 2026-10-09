@@ -10,6 +10,7 @@ import {
   sanitizeSearch
 } from "@/lib/operational";
 import { importOwners } from "./actions";
+import { mostrarSede } from "@/lib/sede-display";
 
 export const maxDuration = 60;
 
@@ -45,9 +46,10 @@ export default async function OwnersPage({ searchParams }) {
     query = query.or(`nombre.ilike.%${q}%,numero_documento.ilike.%${q}%,telefono.ilike.%${q}%,whatsapp.ilike.%${q}%,email.ilike.%${q}%`);
   }
 
-  const { data: owners = [], count = 0 } = await query
+  const { data: owners = [], count = 0, error: ownersError } = await query
     .order(sort, { ascending: dir === "asc", nullsFirst: false })
     .range(offset, offset + limit - 1);
+  if (ownersError) console.error("Error al leer propietarios", { code: ownersError.code, message: ownersError.message });
   const companies = profile.rol === "super_admin"
     ? (await admin.from("empresas").select("id, nombre").eq("activa", true).order("nombre")).data || []
     : [];
@@ -109,6 +111,7 @@ export default async function OwnersPage({ searchParams }) {
           </form>
         </div>
 
+        {ownersError ? <div className="formAlert">No fue posible cargar los propietarios desde Supabase. Revisa la conexión y el campo fuente.</div> : null}
         <div className="dataTableWrap">
           <table className="dataTable">
             <thead><tr>
@@ -123,7 +126,7 @@ export default async function OwnersPage({ searchParams }) {
                   <td>{[owner.tipo_documento, owner.numero_documento].filter(Boolean).join(" ") || "—"}</td>
                   <td>{owner.ciudad || "—"}</td><td>{owner.telefono || "—"}</td><td>{owner.whatsapp || "—"}</td><td>{owner.email || "—"}</td>
                   <td>{pets.length ? pets.map((pet, index) => <span key={pet.id}>{index ? ", " : ""}<Link href={`/mascotas/${pet.id}`}>{pet.nombre} ({pet.numero_carnet || "sin carnet"})</Link></span>) : "Sin mascotas"}</td>
-                  <td>{owner.fuente || "—"}</td>
+                  <td>{mostrarSede(owner.fuente)}</td>
                   <td>{owner.estado || "Activo"}</td>
                   <td><Link className="tableAction" href={`/propietarios/${owner.id}`}>Ver ficha</Link></td>
                 </tr>;
