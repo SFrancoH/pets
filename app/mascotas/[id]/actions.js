@@ -98,6 +98,15 @@ function parseMedicationRows(value) {
 }
 
 export async function createConsultation(petId, formData) {
+  return saveConsultation(petId, null, formData);
+}
+
+export async function updateConsultation(petId, consultationId, formData) {
+  if (!uuidPattern.test(consultationId || "")) redirect("/mascotas");
+  return saveConsultation(petId, consultationId, formData);
+}
+
+async function saveConsultation(petId, consultationId, formData) {
   const actor = await requireOperationalProfile();
   if (!uuidPattern.test(petId)) redirect("/mascotas");
 
@@ -107,6 +116,12 @@ export async function createConsultation(petId, formData) {
     if (actor.rol !== "super_admin") petQuery = petQuery.eq("empresa_id", actor.empresa_id);
     const { data: pet, error: petError } = await petQuery.maybeSingle();
     if (petError || !pet) redirect("/mascotas");
+    if (consultationId) {
+      const { data: existing, error: existingError } = await admin.from("consultas_controles")
+        .select("id").eq("id", consultationId).eq("empresa_id", pet.empresa_id)
+        .eq("mascota_id", pet.id).maybeSingle();
+      if (existingError || !existing) redirect("/mascotas");
+    }
 
     const serviceType = text(formData, "tipo_servicio", 20);
     const veterinarianId = text(formData, "medico_veterinario_id", 36);
@@ -203,13 +218,21 @@ export async function createConsultation(petId, formData) {
       medico_registra_nombre: actor.nombre
     };
 
-    let { error } = await admin.from("consultas_controles").insert(row);
+    if (consultationId) {
+      // La autoría de creación se conserva; updated_at se actualiza mediante trigger de BD.
+      delete row.registrada_por;
+      delete row.medico_registra_nombre;
+    }
+    let { error } = consultationId
+      ? await admin.from("consultas_controles").update(row).eq("id", consultationId)
+          .eq("empresa_id", pet.empresa_id).eq("mascota_id", pet.id)
+      : await admin.from("consultas_controles").insert(row);
     const missingProcedureSchema = error && (
       error.code === "PGRST204"
       || /procedimientos_habilitados|formula_medicamentos|area_consulta/i.test(error.message || "")
     );
 
-    if (missingProcedureSchema) {
+    if (missingProcedureSchema && !consultationId) {
       if (proceduresEnabled) {
         redirect(`/mascotas/${petId}?modulo=consulta-control&vista=nueva&error=actualizar_bd`);
       }
@@ -230,13 +253,13 @@ export async function createConsultation(petId, formData) {
     if (error) throw error;
 
     revalidatePath(`/mascotas/${petId}`);
-    redirect(`/mascotas/${petId}?modulo=consulta-control&ok=consulta_creada`);
+    redirect(`/mascotas/${petId}?modulo=consulta-control&ok=${consultationId ? "consulta_actualizada" : "consulta_creada"}`);
   } catch (error) {
     if (error?.digest?.startsWith("NEXT_REDIRECT")) throw error;
     console.error("No fue posible crear la consulta clínica", {
       code: error?.code,
       message: error?.message
     });
-    redirect(`/mascotas/${petId}?modulo=consulta-control&vista=nueva&error=guardar`);
+    redirect(`/mascotas/${petId}?modulo=consulta-control&error=guardar`);
   }
 }
