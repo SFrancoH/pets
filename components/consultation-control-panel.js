@@ -99,7 +99,7 @@ function newMedicationRow(id) {
 }
 
 function ProcedureBlock({ pet, actor, recordedAt }) {
-  const [enabled, setEnabled] = useState("si");
+  const [enabled, setEnabled] = useState("no");
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [medicationRows, setMedicationRows] = useState([newMedicationRow(1)]);
   const homeTreatmentSelected = selectedTypes.includes("Tratamiento farmacológico en casa");
@@ -134,7 +134,7 @@ function ProcedureBlock({ pet, actor, recordedAt }) {
       <summary>Procedimientos</summary>
       <div className="clinicalBlockContent procedureBlockContent">
         <fieldset className="procedureToggle">
-          <legend>¿Se realizaron procedimientos?</legend>
+          <legend>¿Se realizaron procedimientos? (opcional)</legend>
           <div className="radioRow">
             <label>
               <input
@@ -370,7 +370,7 @@ function ClinicalForm({
   const [stoolType, setStoolType] = useState("");
   const [observation, setObservation] = useState("no");
   const [systemStatus, setSystemStatus] = useState(
-    () => Object.fromEntries(systems.map(([key]) => [key, "Normal"]))
+    () => Object.fromEntries(systems.map(([key]) => [key, "No evaluado"]))
   );
   const action = useMemo(() => createConsultation.bind(null, pet.id), [pet.id]);
   const defaultVeterinarianId = veterinarians.some((vet) => vet.id === actor.id)
@@ -384,6 +384,7 @@ function ClinicalForm({
           <p className="eyebrow">Historia clínica</p>
           <h2>Nueva consulta o control</h2>
           <p>Fecha de registro: <strong>{formatDateTime(recordedAt)}</strong></p>
+          <p>Completa únicamente los apartados evaluados. Los campos clínicos no diligenciados son opcionales.</p>
         </div>
         <button className="buttonSecondary" type="button" onClick={onCancel}>Cancelar</button>
       </div>
@@ -498,7 +499,7 @@ function ClinicalForm({
               <fieldset className={systemStatus[key] === "Anormal" ? "systemAssessment isAbnormal" : "systemAssessment"} key={key}>
                 <legend>{label}</legend>
                 <div className="radioRow">
-                  {["Normal", "Anormal"].map((status) => (
+                  {["No evaluado", "Normal", "Anormal"].map((status) => (
                     <label key={status}>
                       <input
                         type="radio"
