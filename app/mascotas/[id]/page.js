@@ -22,7 +22,7 @@ export default async function PetDetailPage({ params, searchParams }) {
 
   const historyOpen = queryParams?.historial === "1";
   const historyPage = Math.max(1, Number.parseInt(queryParams?.pagina || "1", 10) || 1);
-  const datePattern = /^\\d{4}-\\d{2}-\\d{2}$/;
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
   const historyFrom = datePattern.test(queryParams?.desde || "") ? queryParams.desde : "";
   const historyTo = datePattern.test(queryParams?.hasta || "") ? queryParams.hasta : "";
   let historyQuery = admin.from("consultas_controles")
