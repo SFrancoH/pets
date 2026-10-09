@@ -2,10 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import DashboardHeader from "@/components/dashboard-header";
+import OwnerEditForm from "@/components/owner-edit-form";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { requireOperationalProfile } from "@/lib/operational";
 
-export default async function OwnerDetailPage({ params }) {
+export default async function OwnerDetailPage({ params, searchParams }) {
+  const urlParams = await searchParams;
   const profile = await requireOperationalProfile();
   const { id } = await params;
   const admin = getSupabaseAdmin();
@@ -41,6 +43,8 @@ export default async function OwnerDetailPage({ params }) {
           <p className="eyebrow">Información general</p><h2>Detalles del propietario</h2>
           <dl className="detailGrid">{details.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "—"}</dd></div>)}</dl>
         </section>
+
+        <OwnerEditForm owner={owner} editing={urlParams?.editar === "1"} error={urlParams?.error_perfil === "1"} success={urlParams?.perfil_actualizado === "1"} />
 
         <section className="recordSection">
           <p className="eyebrow">Relaciones</p><h2>Mascotas asociadas</h2>
