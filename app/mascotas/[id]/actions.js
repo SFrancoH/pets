@@ -222,6 +222,7 @@ async function saveConsultation(petId, consultationId, formData) {
       // La autoría de creación se conserva; updated_at se actualiza mediante trigger de BD.
       delete row.registrada_por;
       delete row.medico_registra_nombre;
+      row.ultima_edicion_por = actor.id;
     }
     let { error } = consultationId
       ? await admin.from("consultas_controles").update(row).eq("id", consultationId)
