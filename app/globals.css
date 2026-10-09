@@ -1936,3 +1936,19 @@ button:hover {
   .historyFilter { align-items: stretch; flex-direction: column; }
   .moduleOverviewGrid { grid-template-columns: 1fr; }
 }
+
+/* PETS: separación solicitada entre el selector SEDE y "1 Datos del propietario". */
+.ownerSedeField { margin-bottom: 20px; }
+.associationHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.associationHeading h2 { margin: 0; }
+@media (max-width: 720px) {
+  .associationHeading { align-items: stretch; flex-direction: column; }
+  .associationHeading .actionLink { text-align: center; }
+}
