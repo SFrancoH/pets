@@ -14,16 +14,14 @@ const documentTypes = [
 // Bloque compartido por Nuevo registro y Agregar otro propietario.
 // No incluye información de mascotas: el formulario que lo usa decide el destino.
 export default function OwnerRegistrationFields({ initialSede = "", step = "1" }) {
-  const sedeOptions = initialSede && !sedes.includes(initialSede)
-    ? [initialSede, ...sedes]
-    : sedes;
+  const sedeDefault = sedes.includes(initialSede) ? initialSede : "";
   return (
     <section className="registrationSection">
       <div className="registrationGrid ownerSedeField">
         <label>SEDE
-          <select name="fuente" required defaultValue={initialSede}>
+          <select name="fuente" required defaultValue={sedeDefault}>
             <option value="" disabled>Selecciona una sede</option>
-            {sedeOptions.map((sede) => <option key={sede} value={sede}>{sede}</option>)}
+            {sedes.map((sede) => <option key={sede} value={sede}>{sede}</option>)}
           </select>
         </label>
       </div>
