@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import ConsultationControlPanel from "@/components/consultation-control-panel";
 import DashboardHeader from "@/components/dashboard-header";
 import PetEditForm from "@/components/pet-edit-form";
+import { mostrarSede } from "@/lib/sede-display";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { formatDate, requireOperationalProfile } from "@/lib/operational";
 
@@ -17,7 +18,11 @@ export default async function PetDetailPage({ params, searchParams }) {
     .select(`*, empresas(nombre), propietarios_mascotas(propietarios(id, nombre, telefono, whatsapp, email, numero_documento))`)
     .eq("id", id);
   if (profile.rol !== "super_admin") query = query.eq("empresa_id", profile.empresa_id);
-  const { data: pet } = await query.maybeSingle();
+  const { data: pet, error: petError } = await query.maybeSingle();
+  if (petError) {
+    console.error("Error al consultar mascota", { code: petError.code, message: petError.message });
+    throw new Error("No fue posible consultar la mascota en Supabase.");
+  }
   if (!pet) notFound();
 
   const historyOpen = queryParams?.historial === "1";
@@ -83,7 +88,7 @@ export default async function PetDetailPage({ params, searchParams }) {
     ["Estado reproductivo", pet.estado_reproductivo],
     ["Número de partos", pet.numero_partos],
     ["Estado", pet.estado],
-    ["SEDE", pet.fuente],
+    ["SEDE", mostrarSede(pet.fuente)],
     ["Fecha de fallecimiento", formatDate(pet.fecha_fallecimiento)],
     ["Motivo de fallecimiento", pet.motivo_fallecimiento],
     ["Comentarios del fallecimiento", pet.comentarios_fallecimiento]
@@ -98,7 +103,7 @@ export default async function PetDetailPage({ params, searchParams }) {
           <div>
             <p className="eyebrow">Ficha de mascota</p>
             <h1>{pet.nombre}</h1>
-            <p className="description">SEDE: {pet.fuente || "Sin sede registrada"}</p>
+            <p className="description">SEDE: {mostrarSede(pet.fuente)}</p>
           </div>
           <span className={pet.estado === "Activo" ? "badgeActive" : "badgeInactive"}>
             {pet.estado || (pet.fecha_fallecimiento ? "Fallecido" : "Activo")}
