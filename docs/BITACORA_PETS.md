@@ -184,3 +184,77 @@ order by ordinal_position;
 - **Pruebas pendientes:** guardar consulta solo con tipo y médico, guardar consulta completa con procedimientos y medicamentos, marcar parcialmente los sistemas, verificar `revision_sistemas`, datos `fuente` reales en ambas tablas, columnas SEDE en listas/fichas/Excel, imports desde archivos con columnas fuente/sede, alcance por empresa. Compilar y ejecutar pruebas automatizadas antes de pasar a producción.
 - **Pendiente de integración:** cuando se reemplace el registro externo por un alta nativa, permitir establecer `fuente` en el formulario y escribirla tanto en propietario como en mascota, sin transferir valores de otras empresas.
 - **Importante:** no se ha modificado en este cambio el antiguo flujo de creación de registros mediante formulario externo; continúa listado como prioridad P0.
+
+
+## 11. Registro de cambios — 2026-10-09 — Ediciones, sedes, catálogos e historial
+
+**Estado:** IMPLEMENTADO EN CÓDIGO. **SIN VALIDACIÓN EN SUPABASE DESPLEGADO NI BUILD DE NEXT.JS** al momento de registrar este cambio. Migraciones 006–008 deben ejecutarse en orden antes de activar las nuevas rutas. Conservar esta distinción en informes.
+
+### ADR-013 — Edición explícita por registro
+
+- Se agrega edición y botón **Actualizar datos** en fichas de mascotas y propietarios, y **Editar consulta** en cada historia clínica.
+- La edición de consultas reutiliza el **mismo formulario de creación**, prellenado. Fuera del modo edición, se muestra como solo lectura, sin permitir alterar los campos.
+- Al guardar se realiza UPDATE del registro original, no se crean duplicados. En consultas se conserva autor y fecha originales; `updated_at` se actualiza con el trigger existente; `ultima_edicion_por` identifica al editor.
+- La tabla restringida `auditoria_ediciones_pets` (migración 008) almacena anteriores y nuevos de cada UPDATE en consultas, mascotas y propietarios. Su acceso no se expone en el navegador.
+- Reglas: validar permisos de sesión y `empresa_id` en el servidor para cada UPDATE; las asociaciones de empresa y mascota de la consulta no se sobrescriben desde formularios.
+
+### ADR-014 — Catálogos centralizados
+
+- Archivo `lib/pet-catalogs.js` contiene sedes, especies, razas, temperamentos, estados reproductivos, tamaños y estados de mascota.
+- Sedes admitidas en nuevas altas: `SEDE NORTE` y `SEDE SUR`; etiqueta visible **SEDE**, dato guardado en `fuente` de propietario y mascota.
+- Estado reproductivo normalizado a `Entero`, `Castrado / Esterilizado`, `Desconocido`; se interpreta la expresión recibida «Castrado Esterilazdo» como un único valor.
+- Los formularios de edición aceptan conservar valores históricos no incluidos en los catálogos, evitando borrar datos importados. Nuevos registros deben usar las opciones vigentes.
+- Tamaño se agrega a `mascotas.tamano` por migración 006. Edición del estado admite `Activo`, `Inactivo`, `Fallecido` y la visualización debe reflejar este valor.
+- Importación masiva de mascotas permite columna `tamano` o `tamaño`; continúa admitiendo `fuente` o `sede`.
+
+### ADR-015 — Registro nuevo directo a Supabase sin formulario enlazado
+
+- `app/registros/nuevo/page.js` permite seleccionar sede y catálogos, guardando por acción `createPetRegistration` de `app/registros/nuevo/actions.js`.
+- La acción invoca `public.registrar_propietario_mascota_pets` (SQL 006): una **transacción de base de datos** valida empresa/usuario, reutiliza propietario por documento si existe, inserta mascota y asocia mediante `propietarios_mascotas`.
+- En caso de propietario previamente existente, se conserva su registro, incluido `fuente`; la nueva mascota recibe la sede seleccionada. Actualizar un propietario debe ser una edición separada y explícita.
+- La acción **ya no redirige al formulario externo** ni exige integración activa. El CRM futuro se integrará mediante API/webhook; el envío externo todavía NO está implementado.
+- Las antiguas páginas de confirmación, configuración e integración se conservan únicamente como código heredado y requieren desactivación ordenada; no son parte de la nueva ruta de registro.
+
+### ADR-016 — Índice unificado y paginación de 50 eventos
+
+- Se crea `public.eventos_mascota` por migración SQL 007: referencia a mascota/empresa, tipo de módulo, consulta asociada, fecha y resumen.
+- Un disparador replica altas, cambios y eliminaciones de `consultas_controles` en el índice; la migración rellena registros antiguos. Cada consulta genera un evento «Consulta y control», y uno adicional de «Procedimientos» y/o «Fórmula y remisión» cuando corresponda.
+- `ultimos_eventos_mascota_pets` obtiene un máximo de un evento por módulo. La interfaz muestra nueve módulos, su último registro y «Ver más».
+- La vista ampliada pagina **50 eventos globales por página**, ordenados del más nuevo al más antiguo, y permite filtrar con `desde` y `hasta` incluidos en los enlaces de paginación.
+- Los detalles de una consulta se consultan únicamente para los registros de la página y se presentan mediante formulario de solo lectura, con edición individual.
+- Vacunación, desparasitación, estética, guardería, seguimiento y consentimientos **todavía no tienen flujos operativos propios**. El índice ya admite eventos de estos módulos, pero crear y editar sus datos concretos queda PENDIENTE. No generar datos simulados.
+- Para fechas se interpreta la búsqueda en zona `America/Bogota` (-05:00).
+
+### Archivos agregados
+
+- `lib/pet-catalogs.js`
+- `components/pet-edit-form.js`, `components/owner-edit-form.js`
+- `app/mascotas/[id]/profile-actions.js`, `app/propietarios/[id]/actions.js`
+- `supabase/migrations/006_registro_directo_y_tamano.sql`
+- `supabase/migrations/007_historial_unificado.sql`
+- `supabase/migrations/008_auditoria_ediciones.sql`
+
+### Archivos actualizados
+
+- `app/mascotas/[id]/page.js`, `app/mascotas/[id]/actions.js`
+- `app/propietarios/[id]/page.js`
+- `components/consultation-control-panel.js`
+- `app/registros/nuevo/page.js`, `app/registros/nuevo/actions.js`
+- `app/mascotas/page.js`, `app/mascotas/actions.js`
+- `app/globals.css`
+
+### Validación y pendientes
+
+- **Hecho:** comprobaciones estáticas de presencia de cambios y parámetros en el repositorio.
+- **Pendiente P0:** ejecutar migraciones SQL 006, 007, 008 en orden (005 opcional si `fuente` ya existe), verificar estado de las funciones y tablas.
+- **Pendiente P0:** `npm install && npm run build` y pruebas de formulario en entorno de desarrollo/despliegue.
+- **Pendiente P0:** probar nuevo registro (propietario existente y nuevo; mismo documento en otra empresa; carnet duplicado); nuevos campos y permisos; consultas editadas y persistencia de todos los campos.
+- **Pendiente P0:** probar auditoría de tres entidades y sincronización del índice de eventos (crear, modificar, paginar, filtrar).
+- **Pendiente P1:** crear formularios y persistencia de los módulos todavía deshabilitados y vincular sus eventos al índice.
+- **Pendiente P1:** integración CRM post-commit por API/webhook con cola, idempotencia, reintentos; retiro seguro del flujo heredado.
+- **Pendiente P1:** mostrar de forma filtrada las revisiones de auditoría para usuarios con autorización expresa, definir retención.
+- **Pendiente P2:** pruebas E2E automatizadas y ajustes de UX para campos opcionales de formularios clínicos.
+
+### Regla para el despliegue
+
+No desplegar frontend ni acciones que dependan de `tamano`, `registrar_propietario_mascota_pets`, `eventos_mascota`, `ultimos_eventos_mascota_pets`, `ultima_edicion_por` o `auditoria_ediciones_pets` antes de aplicar y verificar las migraciones 006–008. Todas las funciones con `SECURITY DEFINER` quedan ejecutables solo con `service_role` y las claves secretas permanecen exclusivamente en servidor.
