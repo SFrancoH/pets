@@ -16,7 +16,9 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 
 ## Base de datos
 
-Ejecuta `supabase/migrations/001_saas_core.sql` en el SQL Editor de Supabase. La migración crea las tablas `empresas`, `usuarios`, `mascotas`, `propietarios` y `propietarios_mascotas`, activa RLS y garantiza que solo pueda existir un `super_admin`.
+Ejecuta las migraciones de `supabase/migrations` en orden numérico (001–008) en el SQL Editor de Supabase. Las migraciones 006, 007 y 008 habilitan el registro nativo transaccional, el historial unificado con paginación y la auditoría de ediciones. Deben estar aplicadas **antes** de usar esas funciones en la aplicación.
+
+La documentación operativa, las decisiones, el historial de cambios y los pendientes están en [docs/BITACORA_PETS.md](docs/BITACORA_PETS.md). El antiguo documento de formulario externo se conserva exclusivamente como referencia histórica.
 
 ## Comandos
 
