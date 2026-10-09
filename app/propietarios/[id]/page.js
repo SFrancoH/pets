@@ -23,7 +23,8 @@ export default async function OwnerDetailPage({ params }) {
     ["WhatsApp", owner.whatsapp], ["Email", owner.email], ["Tipo de documento", owner.tipo_documento],
     ["Número de documento", owner.numero_documento], ["Estado", owner.estado],
     ["Notificaciones de WhatsApp", owner.notificaciones_whatsapp ? "Sí" : "No"],
-    ["Tags", (owner.tags || []).join(", ")]
+    ["Tags", (owner.tags || []).join(", ")],
+    ["SEDE", owner.fuente]
   ];
 
   return (
@@ -32,7 +33,7 @@ export default async function OwnerDetailPage({ params }) {
       <section className="dashboardContent wideContent">
         <Link className="backLink" href="/propietarios">← Volver a propietarios</Link>
         <div className="recordHeading">
-          <div><p className="eyebrow">Ficha de propietario</p><h1>{owner.nombre}</h1><p className="description">{owner.empresas?.nombre || ""}</p></div>
+          <div><p className="eyebrow">Ficha de propietario</p><h1>{owner.nombre}</h1><p className="description">SEDE: {owner.fuente || "Sin sede registrada"}</p></div>
           <span className={owner.estado?.toLowerCase() === "inactivo" ? "badgeInactive" : "badgeActive"}>{owner.estado || "Activo"}</span>
         </div>
 
