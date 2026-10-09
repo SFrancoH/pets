@@ -1,5 +1,7 @@
 # Configuración del formulario de propietarios
 
+> **OBSOLETO — REFERENCIA HISTÓRICA (2026-10-08).** PETS ya no debe utilizar enlaces de formularios externos para registrar propietarios o mascotas. El flujo descrito a continuación corresponde a la implementación anterior y **no debe usarse para nuevos desarrollos**. Consultar [BITACORA_PETS.md](./BITACORA_PETS.md) para las decisiones vigentes. La sustitución en código está pendiente.
+
 El formulario externo contiene únicamente datos del propietario. Los datos de la mascota se guardan en PETS y nunca se envían como campos de contacto.
 
 ## Campos y Query Keys
