@@ -37,6 +37,7 @@ export async function GET(request) {
     { header: "Motivo de fallecimiento", key: "motivo_fallecimiento", width: 28 },
     { header: "Comentarios del fallecimiento", key: "comentarios_fallecimiento", width: 34 },
     { header: "Estado", key: "estado", width: 14 },
+    { header: "SEDE", key: "fuente", width: 24 },
     { header: "Propietarios", key: "propietarios", width: 34 },
     { header: "Teléfonos", key: "telefonos", width: 24 }
   ];
@@ -60,6 +61,7 @@ export async function GET(request) {
       motivo_fallecimiento: pet.motivo_fallecimiento || "",
       comentarios_fallecimiento: pet.comentarios_fallecimiento || "",
       estado: pet.estado || "",
+      fuente: pet.fuente || "",
       propietarios: owners.map((owner) => owner.nombre).join(", "),
       telefonos: owners.map((owner) => owner.whatsapp || owner.telefono).filter(Boolean).join(", ")
     };
