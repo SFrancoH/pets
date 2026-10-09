@@ -224,6 +224,7 @@ function ProcedureBlock({ pet, actor, recordedAt, initial = {} }) {
                   <ReadonlyField label="Mascota" value={pet.nombre} />
                   <ReadonlyField label="Especie" value={pet.especie} />
                   <ReadonlyField label="Raza" value={pet.raza} />
+          <ReadonlyField label="Tamaño" value={pet.tamano} />
                   <ReadonlyField label="Sexo" value={pet.sexo} />
                   <ReadonlyField label="Peso actual" value={pet.peso_kg !== null ? `${pet.peso_kg} kg` : null} />
                 </div>
@@ -410,6 +411,7 @@ function ClinicalForm({
           <ReadonlyField label="Número de carnet" value={pet.numero_carnet} />
           <ReadonlyField label="Especie" value={pet.especie} />
           <ReadonlyField label="Raza" value={pet.raza} />
+          <ReadonlyField label="Tamaño" value={pet.tamano} />
           <ReadonlyField label="Sexo" value={pet.sexo} />
           <ReadonlyField label="Fecha de nacimiento" value={pet.fecha_nacimiento_formateada} />
           <ReadonlyField label="Estado reproductivo" value={pet.estado_reproductivo} />
