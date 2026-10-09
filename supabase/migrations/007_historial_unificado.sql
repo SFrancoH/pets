@@ -94,12 +94,12 @@ create or replace function public.ultimos_eventos_mascota_pets(
   p_empresa_id uuid, p_mascota_id uuid
 ) returns setof public.eventos_mascota
 language sql stable security definer set search_path = ''
-as $
+as $pets_recent$
   select distinct on (e.modulo) e.*
   from public.eventos_mascota e
   where e.empresa_id = p_empresa_id and e.mascota_id = p_mascota_id
   order by e.modulo, e.fecha_registro desc, e.id desc
-$;
+$pets_recent$;
 revoke all on function public.ultimos_eventos_mascota_pets(uuid, uuid) from public, anon, authenticated;
 grant execute on function public.ultimos_eventos_mascota_pets(uuid, uuid) to service_role;
 
