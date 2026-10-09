@@ -36,7 +36,7 @@ export async function addOwnerToPet(petId, formData) {
     fuente: read(formData, "fuente", 40)
   };
   if (owner.nombre.length < 2 || !owner.correo_electronico.includes("@")
-    || owner.whatsapp.replace(/\\D/g, "").length < 7
+    || owner.whatsapp.replace(/\D/g, "").length < 7
     || !owner.numero_documento || !owner.tipo_documento
     || !["Si", "No"].includes(owner.notificacion_email)
     || !["Si", "No"].includes(owner.notificacion_whatsapp)
