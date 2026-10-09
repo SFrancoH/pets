@@ -167,3 +167,20 @@ order by ordinal_position;
 - `app/api/integraciones/contactos/[token]/route.js`: webhook heredado.
 
 **Regla de mantenimiento:** toda modificación futura debe actualizar esta bitácora, indicar una decisión si cambia arquitectura, enlazar migración SQL cuando proceda y marcar explícitamente qué se implementó, qué se probó y qué sigue pendiente.
+
+
+## 10. Registro de cambios — 2026-10-08 — Formularios clínicos parciales y SEDE
+
+- **Estado:** IMPLEMENTADO EN CÓDIGO; pendiente de validación manual en el Supabase desplegado, prueba UI y build.
+- **Motivo:** el formulario bloqueaba el envío al marcar procedimientos como realizados de forma predeterminada; además, se necesita visualizar la sede/origen de mascotas y propietarios desde la columna `fuente`.
+- **Decisión ADR-011:** "SEDE" es una etiqueta de interfaz asociada al atributo `fuente` de cada registro, **no** sustituye `empresa_id` ni sus restricciones de aislamiento multiempresa.
+- **Decisión ADR-012:** un dato clínico sin evaluar debe quedar ausente de `revision_sistemas`; no registrar automáticamente "Normal". Solo el tipo de servicio y el veterinario son obligatorios para una consulta básica. Los campos de procedimientos/medicación son obligatorios únicamente si el usuario activa esos módulos.
+- **Antes → después (consulta):** `procedimientos_habilitados` comenzaba en `si` y obligaba a escoger `area_consulta` incluso sin procedimientos → inicia en `no` y permite una consulta parcial. Los diez sistemas comenzaban en "Normal" → comienzan en "No evaluado" y únicamente se almacenan "Normal" o "Anormal" si el usuario los selecciona.
+- **Antes → después (SEDE):** listado condicionado "Empresa" visible solo a superadmin → columna `SEDE` visible para todos los roles autorizados y alimentada por `fuente`; las fichas individuales muestran SEDE y el detalle de propietarios lo sitúa después de Tags; la ficha de mascotas lo incluye en Información general.
+- **Importaciones:** nuevas filas importadas aceptan columnas del archivo llamadas `fuente` o `sede`; se preserva un valor existente del grupo al combinar filas del mismo propietario.
+- **Exportaciones:** Excel de mascotas y propietarios contiene ahora columna `SEDE`.
+- **SQL:** `supabase/migrations/005_fuente_sede.sql` añade las dos columnas con `IF NOT EXISTS`; es seguro si ya fueron creadas manualmente. Las tablas SQL aportadas por el usuario no muestran `fuente`, pese a que informó que las columnas ya existen. Confirmar el esquema real antes de desplegar. **No ejecutar nuevamente los `CREATE TABLE` copiados del editor de Supabase**.
+- **Archivos de código modificados:** `components/consultation-control-panel.js`, `app/mascotas/[id]/actions.js`, `app/propietarios/page.js`, `app/mascotas/page.js`, `app/propietarios/[id]/page.js`, `app/mascotas/[id]/page.js`, `app/propietarios/actions.js`, `app/mascotas/actions.js`, `app/api/export/propietarios/route.js`, `app/api/export/mascotas/route.js`.
+- **Pruebas pendientes:** guardar consulta solo con tipo y médico, guardar consulta completa con procedimientos y medicamentos, marcar parcialmente los sistemas, verificar `revision_sistemas`, datos `fuente` reales en ambas tablas, columnas SEDE en listas/fichas/Excel, imports desde archivos con columnas fuente/sede, alcance por empresa. Compilar y ejecutar pruebas automatizadas antes de pasar a producción.
+- **Pendiente de integración:** cuando se reemplace el registro externo por un alta nativa, permitir establecer `fuente` en el formulario y escribirla tanto en propietario como en mascota, sin transferir valores de otras empresas.
+- **Importante:** no se ha modificado en este cambio el antiguo flujo de creación de registros mediante formulario externo; continúa listado como prioridad P0.
