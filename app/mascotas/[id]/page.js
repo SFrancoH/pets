@@ -62,6 +62,7 @@ export default async function PetDetailPage({ params, searchParams }) {
     ["Estado reproductivo", pet.estado_reproductivo],
     ["Número de partos", pet.numero_partos],
     ["Estado", pet.estado],
+    ["SEDE", pet.fuente],
     ["Fecha de fallecimiento", formatDate(pet.fecha_fallecimiento)],
     ["Motivo de fallecimiento", pet.motivo_fallecimiento],
     ["Comentarios del fallecimiento", pet.comentarios_fallecimiento]
@@ -76,7 +77,7 @@ export default async function PetDetailPage({ params, searchParams }) {
           <div>
             <p className="eyebrow">Ficha de mascota</p>
             <h1>{pet.nombre}</h1>
-            <p className="description">{pet.empresas?.nombre || ""}</p>
+            <p className="description">SEDE: {pet.fuente || "Sin sede registrada"}</p>
           </div>
           <span className={pet.fecha_fallecimiento ? "badgeInactive" : "badgeActive"}>
             {pet.fecha_fallecimiento ? "Fallecido" : pet.estado || "Activo"}
