@@ -1,22 +1,12 @@
 import Link from "next/link";
 
 import CarnetGenerator from "@/components/carnet-generator";
-import { sedes, especies, razas, temperamentos, estadosReproductivos, tamanos, estadosMascota } from "@/lib/pet-catalogs";
+import OwnerRegistrationFields from "@/components/owner-registration-fields";
+import { especies, razas, temperamentos, estadosReproductivos, tamanos, estadosMascota } from "@/lib/pet-catalogs";
 import DashboardHeader from "@/components/dashboard-header";
 import { requireOperationalProfile } from "@/lib/operational";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createPetRegistration } from "./actions";
-
-const documentTypes = [
-  "Cédula de ciudadania",
-  "Cédula extranjera",
-  "NIT",
-  "RUT",
-  "CURP",
-  "Tarjeta de identidad nacional",
-  "Pasaporte",
-  "Documento de identidad internacional"
-];
 
 const errorMessages = {
   empresa: "Selecciona una empresa válida.",
@@ -57,23 +47,7 @@ export default async function NewRegistrationPage({ searchParams }) {
             </section>
           ) : null}
 
-          <section className="registrationSection">
-            <div className="registrationGrid"><label>SEDE<select name="fuente" required defaultValue=""><option value="" disabled>Selecciona una sede</option>{sedes.map((sede) => <option key={sede} value={sede}>{sede}</option>)}</select></label></div>
-            <div className="sectionHeading"><div><span>1</span><h2>Datos del propietario</h2></div><small>Los datos se guardarán directamente en PETS.</small></div>
-            <div className="registrationGrid">
-              <label>Nombre<input name="nombre" maxLength={80} required /></label>
-              <label>Apellido<input name="apellido" maxLength={80} /></label>
-              <label>WhatsApp<input name="whatsapp" type="tel" maxLength={40} required /></label>
-              <label>Teléfono alterno<input name="telefono" type="tel" maxLength={40} /></label>
-              <label>Correo electrónico<input name="correo_electronico" type="email" maxLength={160} required /></label>
-              <label>Ciudad<input name="ciudad" maxLength={100} /></label>
-              <label className="fullField">Dirección<input name="direccion" maxLength={220} /></label>
-              <label>Tipo de documento<select name="tipo_documento" required defaultValue=""><option value="" disabled>Selecciona una opción</option>{documentTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
-              <label>Número de documento<input name="numero_documento" maxLength={80} required /></label>
-              <fieldset className="choiceField"><legend>¿Acepta recordatorios por correo electrónico?</legend><label><input type="radio" name="notificacion_email" value="Si" required /> Sí</label><label><input type="radio" name="notificacion_email" value="No" required /> No</label></fieldset>
-              <fieldset className="choiceField"><legend>¿Acepta recordatorios por WhatsApp?</legend><label><input type="radio" name="notificacion_whatsapp" value="Si" required /> Sí</label><label><input type="radio" name="notificacion_whatsapp" value="No" required /> No</label></fieldset>
-            </div>
-          </section>
+          <OwnerRegistrationFields />
 
           <section className="registrationSection">
             <div className="sectionHeading"><div><span>2</span><h2>Datos de la mascota</h2></div><small>La mascota se guardará únicamente en PETS.</small></div>
