@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import DashboardHeader from "@/components/dashboard-header";
 import OwnerEditForm from "@/components/owner-edit-form";
+import { mostrarSede } from "@/lib/sede-display";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { requireOperationalProfile } from "@/lib/operational";
 
@@ -16,7 +17,11 @@ export default async function OwnerDetailPage({ params, searchParams }) {
     .select(`*, empresas(nombre), propietarios_mascotas(mascotas(id, nombre, numero_carnet, especie, raza, sexo, estado, fecha_fallecimiento))`)
     .eq("id", id);
   if (profile.rol !== "super_admin") query = query.eq("empresa_id", profile.empresa_id);
-  const { data: owner } = await query.maybeSingle();
+  const { data: owner, error: ownerError } = await query.maybeSingle();
+  if (ownerError) {
+    console.error("Error al consultar propietario", { code: ownerError.code, message: ownerError.message });
+    throw new Error("No fue posible consultar el propietario en Supabase.");
+  }
   if (!owner) notFound();
 
   const pets = (owner.propietarios_mascotas || []).map((relation) => relation.mascotas).filter(Boolean);
@@ -26,7 +31,7 @@ export default async function OwnerDetailPage({ params, searchParams }) {
     ["Número de documento", owner.numero_documento], ["Estado", owner.estado],
     ["Notificaciones de WhatsApp", owner.notificaciones_whatsapp ? "Sí" : "No"],
     ["Tags", (owner.tags || []).join(", ")],
-    ["SEDE", owner.fuente]
+    ["SEDE", mostrarSede(owner.fuente)]
   ];
 
   return (
@@ -35,7 +40,7 @@ export default async function OwnerDetailPage({ params, searchParams }) {
       <section className="dashboardContent wideContent">
         <Link className="backLink" href="/propietarios">← Volver a propietarios</Link>
         <div className="recordHeading">
-          <div><p className="eyebrow">Ficha de propietario</p><h1>{owner.nombre}</h1><p className="description">SEDE: {owner.fuente || "Sin sede registrada"}</p></div>
+          <div><p className="eyebrow">Ficha de propietario</p><h1>{owner.nombre}</h1><p className="description">SEDE: {mostrarSede(owner.fuente)}</p></div>
           <span className={owner.estado?.toLowerCase() === "inactivo" ? "badgeInactive" : "badgeActive"}>{owner.estado || "Activo"}</span>
         </div>
 
