@@ -36,8 +36,7 @@ export default async function OwnersPage({ searchParams }) {
     .from("propietarios")
     .select(
       `id, empresa_id, nombre, ciudad, direccion, telefono, whatsapp, email,
-       tipo_documento, numero_documento, estado, notificaciones_whatsapp, tags,
-       empresas(nombre),
+       tipo_documento, numero_documento, estado, notificaciones_whatsapp, tags, fuente,
        propietarios_mascotas(mascotas(id, nombre, numero_carnet))`,
       { count: "exact" }
     );
@@ -114,7 +113,7 @@ export default async function OwnersPage({ searchParams }) {
           <table className="dataTable">
             <thead><tr>
               <th>Nombre</th><th>Documento</th><th>Ciudad</th><th>Teléfono</th><th>WhatsApp</th><th>Email</th><th>Mascotas / carnets</th>
-              {profile.rol === "super_admin" ? <th>Empresa</th> : null}<th>Estado</th><th>Acciones</th>
+              <th>SEDE</th><th>Estado</th><th>Acciones</th>
             </tr></thead>
             <tbody>
               {owners.length ? owners.map((owner) => {
@@ -124,11 +123,11 @@ export default async function OwnersPage({ searchParams }) {
                   <td>{[owner.tipo_documento, owner.numero_documento].filter(Boolean).join(" ") || "—"}</td>
                   <td>{owner.ciudad || "—"}</td><td>{owner.telefono || "—"}</td><td>{owner.whatsapp || "—"}</td><td>{owner.email || "—"}</td>
                   <td>{pets.length ? pets.map((pet, index) => <span key={pet.id}>{index ? ", " : ""}<Link href={`/mascotas/${pet.id}`}>{pet.nombre} ({pet.numero_carnet || "sin carnet"})</Link></span>) : "Sin mascotas"}</td>
-                  {profile.rol === "super_admin" ? <td>{owner.empresas?.nombre || "—"}</td> : null}
+                  <td>{owner.fuente || "—"}</td>
                   <td>{owner.estado || "Activo"}</td>
                   <td><Link className="tableAction" href={`/propietarios/${owner.id}`}>Ver ficha</Link></td>
                 </tr>;
-              }) : <tr><td className="tableEmpty" colSpan={profile.rol === "super_admin" ? 10 : 9}>No hay propietarios para mostrar.</td></tr>}
+              }) : <tr><td className="tableEmpty" colSpan={10}>No hay propietarios para mostrar.</td></tr>}
             </tbody>
           </table>
         </div>
