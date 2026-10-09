@@ -49,7 +49,7 @@ export default async function NewRegistrationPage({ searchParams }) {
 
         {params?.error ? <div className="formAlert">{errorMessages[params.error] || errorMessages.guardar}</div> : null}
 
-        <form action={createPendingPetRegistration} className="registrationForm">
+        <form action={createPetRegistration} className="registrationForm">
           {profile.rol === "super_admin" ? (
             <section className="registrationSection">
               <h2>Empresa</h2>
