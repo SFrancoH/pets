@@ -33,6 +33,7 @@ export async function GET(request) {
     { header: "Estado", key: "estado", width: 14 },
     { header: "Notificaciones WhatsApp", key: "notificaciones_whatsapp", width: 24 },
     { header: "Tags", key: "tags", width: 28 },
+    { header: "SEDE", key: "fuente", width: 24 },
     { header: "Números de carnet", key: "numeros_carnet", width: 32 },
     { header: "Mascotas", key: "mascotas", width: 34 }
   ];
@@ -51,6 +52,7 @@ export async function GET(request) {
       estado: owner.estado || "",
       notificaciones_whatsapp: owner.notificaciones_whatsapp ? "Sí" : "No",
       tags: (owner.tags || []).join(", "),
+      fuente: owner.fuente || "",
       numeros_carnet: pets.map((pet) => pet.numero_carnet).filter(Boolean).join(", "),
       mascotas: pets.map((pet) => pet.nombre).join(", ")
     };
