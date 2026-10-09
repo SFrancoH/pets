@@ -671,14 +671,14 @@ function ProcedureHistory({ consultation }) {
   );
 }
 
-function ConsultationEntry({ consultation, pet, veterinarians, actor, procedureSchemaReady }) {
+function ConsultationEntry({ consultation, pet, veterinarians, actor, procedureSchemaReady, moduleLabel = null }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   return (
-    <details className="consultationCard" onToggle={(event) => setExpanded(event.currentTarget.open)}>
+    <details className="consultationCard" onToggle={(event) => { if (event.target === event.currentTarget) setExpanded(event.currentTarget.open); }}>
       <summary>
         <span>
-          <strong>{consultation.tipo_servicio}</strong>
+          <strong>{moduleLabel || consultation.tipo_servicio}</strong>
           <small>{formatDateTime(consultation.fecha_registro)}</small>
         </span>
         <span className="historyDoctor">{consultation.medico_veterinario_nombre}</span>
@@ -720,19 +720,21 @@ function ConsultationHistory({ consultations, pet, veterinarians, actor, procedu
   );
 }
 
-function PetHistoryOverview({ pet, latestConsultation, latestProcedure, latestFormula, consultations,
-  veterinarians, actor, procedureSchemaReady, historyOpen, historyPage, historyTotal, historyFrom, historyTo }) {
-  const moduleOverview = [
-    ["Consulta y control", latestConsultation],
-    ["Fórmula y remisión", latestFormula],
-    ["Procedimientos", latestProcedure],
-    ["Vacunación", null],
-    ["Desparasitación", null],
-    ["Estética", null],
-    ["Guardería", null],
-    ["Seguimiento", null],
-    ["Consentimientos", null]
+function PetHistoryOverview({ pet, latestConsultation, latestModules = [], historyEntries = [],
+  eventSchemaReady, consultations, veterinarians, actor, procedureSchemaReady,
+  historyOpen, historyPage, historyTotal, historyFrom, historyTo }) {
+  const names = [
+    "Consulta y control", "Fórmula y remisión", "Procedimientos", "Vacunación",
+    "Desparasitación", "Estética", "Guardería", "Seguimiento", "Consentimientos"
   ];
+  const moduleOverview = names.map((name) => [
+    name,
+    latestModules.find((event) => event.modulo === name) || (
+      !eventSchemaReady && name === "Consulta y control" && latestConsultation
+        ? { fecha_registro: latestConsultation.fecha_registro, resumen: latestConsultation.tipo_servicio }
+        : null
+    )
+  ]);
   const totalPages = Math.max(1, Math.ceil(historyTotal / 50));
   const historyHref = (page) => {
     const q = new URLSearchParams({ historial: "1", pagina: String(page) });
@@ -744,16 +746,20 @@ function PetHistoryOverview({ pet, latestConsultation, latestProcedure, latestFo
     <section className="consultationWorkspace petHistoryOverview">
       <div className="consultationToolbar">
         <div><p className="eyebrow">Historia clínica</p><h2>Historial de la mascota</h2>
-          <p>Último registro de cada módulo de {pet.nombre}. Los módulos sin implementación mostrarán «Sin registros».</p>
+          <p>Un registro reciente por módulo de {pet.nombre}; la cronología completa se abre con «Ver más».</p>
         </div>
       </div>
+      {!eventSchemaReady ? <div className="formAlert">
+        Para activar el historial unificado, ejecuta la migración SQL 007 en Supabase.
+      </div> : null}
       <div className="moduleOverviewGrid">
-        {moduleOverview.map(([label, record]) => (
+        {moduleOverview.map(([label, event]) => (
           <div className="moduleOverviewCard" key={label}>
             <strong>{label}</strong>
-            {record ? (
-              <div><span>{record.tipo_servicio} · {formatDateTime(record.fecha_registro)}</span>
-                <small>{record.motivo_cita || record.medico_veterinario_nombre || "Registro clínico"}</small>
+            {event ? (
+              <div>
+                <span>{formatDateTime(event.fecha_registro)}</span>
+                <small>{event.resumen || "Registro asociado"}</small>
               </div>
             ) : <span className="muted">Sin registros disponibles</span>}
           </div>
@@ -772,17 +778,32 @@ function PetHistoryOverview({ pet, latestConsultation, latestProcedure, latestFo
             <label>Desde<input type="date" name="desde" defaultValue={historyFrom} /></label>
             <label>Hasta<input type="date" name="hasta" defaultValue={historyTo} /></label>
             <button type="submit">Buscar por fechas</button>
-            <Link className="secondaryLink" href={historyHref(1).split("&desde=")[0].split("&hasta=")[0]}>Limpiar</Link>
+            <Link className="secondaryLink" href={`/mascotas/${pet.id}?historial=1`}>Limpiar</Link>
           </form>
-          <p className="description">{historyTotal} consultas y controles encontrados. Se muestran hasta 50 por página, del más reciente al más antiguo. Las demás categorías se incorporarán cuando sus módulos estén habilitados.</p>
-          <ConsultationHistory consultations={consultations} pet={pet} veterinarians={veterinarians}
-            actor={actor} procedureSchemaReady={procedureSchemaReady} />
-          {totalPages > 1 ? (
-            <nav className="historyPagination" aria-label="Paginación del historial">
-              {historyPage > 1 ? <Link href={historyHref(historyPage - 1)}>← Anterior</Link> : null}
-              <span>Página {historyPage} de {totalPages}</span>
-              {historyPage < totalPages ? <Link href={historyHref(historyPage + 1)}>Siguiente →</Link> : null}
-            </nav>
+          {eventSchemaReady ? (
+            <>
+              <p className="description">{historyTotal} eventos encontrados. Se muestran hasta 50 por página, del más reciente al más antiguo.</p>
+              <div className="consultationHistory">
+                {historyEntries.map((event) => event.consulta ? (
+                  <ConsultationEntry key={event.id} moduleLabel={event.modulo}
+                    consultation={event.consulta} pet={pet} veterinarians={veterinarians}
+                    actor={actor} procedureSchemaReady={procedureSchemaReady} />
+                ) : (
+                  <details key={event.id} className="consultationCard">
+                    <summary><strong>{event.modulo}</strong><small>{formatDateTime(event.fecha_registro)}</small></summary>
+                    <div className="consultationCardContent"><p>{event.resumen || "Registro sin descripción"}</p></div>
+                  </details>
+                ))}
+              </div>
+              {!historyEntries.length ? <p>No hay eventos en el rango seleccionado.</p> : null}
+              {totalPages > 1 ? (
+                <nav className="historyPagination" aria-label="Paginación del historial">
+                  {historyPage > 1 ? <Link href={historyHref(historyPage - 1)}>← Anterior</Link> : null}
+                  <span>Página {historyPage} de {totalPages}</span>
+                  {historyPage < totalPages ? <Link href={historyHref(historyPage + 1)}>Siguiente →</Link> : null}
+                </nav>
+              ) : null}
+            </>
           ) : null}
         </div>
       )}
@@ -796,8 +817,9 @@ export default function ConsultationControlPanel({
   actor,
   consultations,
   latestConsultation,
-  latestProcedure,
-  latestFormula,
+  latestModules,
+  historyEntries,
+  eventSchemaReady,
   historyOpen,
   historyPage,
   historyTotal,
@@ -843,7 +865,7 @@ export default function ConsultationControlPanel({
 
       {selectedModule === "historia" ? (
         <PetHistoryOverview pet={pet} latestConsultation={latestConsultation}
-          latestProcedure={latestProcedure} latestFormula={latestFormula}
+          latestModules={latestModules} historyEntries={historyEntries} eventSchemaReady={eventSchemaReady}
           historyOpen={historyOpen} historyPage={historyPage} historyTotal={historyTotal}
           historyFrom={historyFrom} historyTo={historyTo} consultations={consultations}
           veterinarians={veterinarians} actor={actor} procedureSchemaReady={procedureSchemaReady} />
