@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { requireOperationalProfile } from "@/lib/operational";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { especies, razas, sedes, temperamentos, estadosReproductivos, tamanos } from "@/lib/pet-catalogs";
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -38,7 +39,8 @@ export async function createPendingPetRegistration(formData) {
     tipo_documento: text(formData, "tipo_documento", 80),
     numero_documento: text(formData, "numero_documento", 80),
     notificacion_email: text(formData, "notificacion_email", 10),
-    notificacion_whatsapp: text(formData, "notificacion_whatsapp", 10)
+    notificacion_whatsapp: text(formData, "notificacion_whatsapp", 10),
+    fuente: text(formData, "fuente", 40)
   };
   const pet = {
     nombre: text(formData, "mascota_nombre", 120),
@@ -50,7 +52,9 @@ export async function createPendingPetRegistration(formData) {
     peso_kg: optionalNumber(formData, "peso_kg"),
     temperamento: text(formData, "temperamento", 120),
     estado_reproductivo: text(formData, "estado_reproductivo", 100),
-    numero_partos: optionalNumber(formData, "numero_partos")
+    numero_partos: optionalNumber(formData, "numero_partos"),
+    tamano: text(formData, "tamano", 30),
+    fuente: owner.fuente
   };
   const carnet = text(formData, "numero_carnet", 40);
 
@@ -60,48 +64,26 @@ export async function createPendingPetRegistration(formData) {
   if (!pet.nombre || !pet.especie || !carnet) fail("mascota");
   if (!/^\d{14}$/.test(carnet)) fail("carnet");
   if (!owner.tipo_documento || !owner.numero_documento) fail("documento");
+  if (!sedes.includes(owner.fuente)) fail("sede");
+  if (!especies.includes(pet.especie) || (pet.raza && !razas.includes(pet.raza)) ||
+      (pet.temperamento && !temperamentos.includes(pet.temperamento)) ||
+      (pet.estado_reproductivo && !estadosReproductivos.includes(pet.estado_reproductivo)) ||
+      (pet.tamano && !tamanos.includes(pet.tamano))) fail("mascota");
   if (!["Si", "No"].includes(owner.notificacion_email) || !["Si", "No"].includes(owner.notificacion_whatsapp)) {
     fail("notificaciones");
   }
 
   const admin = getSupabaseAdmin();
-  const [{ data: integration }, { data: existingPet }, { data: pending }] = await Promise.all([
-    admin
-      .from("integraciones_contacto")
-      .select("empresa_id")
-      .eq("empresa_id", companyId)
-      .eq("activa", true)
-      .maybeSingle(),
-    admin
-      .from("mascotas")
-      .select("id")
-      .eq("empresa_id", companyId)
-      .ilike("numero_carnet", carnet)
-      .maybeSingle(),
-    admin
-      .from("registros_mascotas_pendientes")
-      .select("id")
-      .eq("empresa_id", companyId)
-      .eq("estado", "pendiente")
-      .ilike("numero_carnet", carnet)
-      .maybeSingle()
-  ]);
-
-  if (!integration) fail("integracion");
-  if (existingPet || pending) fail("carnet_repetido");
-
-  const { data: registration, error } = await admin
-    .from("registros_mascotas_pendientes")
-    .insert({
-      empresa_id: companyId,
-      creado_por: profile.id,
-      propietario: owner,
-      mascota: pet,
-      numero_carnet: carnet
-    })
-    .select("id")
-    .single();
-
-  if (error || !registration) fail("guardar");
-  redirect(`/registros/${registration.id}/confirmar`);
+  const { data, error } = await admin.rpc("registrar_propietario_mascota_pets", {
+    p_empresa_id: companyId,
+    p_actor_id: profile.id,
+    p_propietario: owner,
+    p_mascota: pet,
+    p_carnet: carnet
+  });
+  if (error || !data?.ok || !data?.mascota_id) {
+    console.error("No se pudo crear el registro en PETS", { code: error?.code, message: error?.message });
+    fail(error?.code === "23505" ? "carnet_repetido" : "guardar");
+  }
+  redirect(`/mascotas/${data.mascota_id}?registro=creado`);
 }
