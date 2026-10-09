@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { createConsultation } from "@/app/mascotas/[id]/actions";
+import { createConsultation, updateConsultation } from "@/app/mascotas/[id]/actions";
+import Link from "next/link";
 import {
   administrationRoutes,
   medicationFrequencies,
@@ -12,7 +13,7 @@ import {
 } from "@/lib/clinical-catalogs";
 
 const modules = [
-  ["historia", "Historia del paciente"],
+  ["historia", "Historial de la mascota"],
   ["consulta-control", "Consulta y control"],
   ["formula", "Fórmula y remisión"],
   ["procedimientos", "Procedimientos"],
@@ -98,10 +99,14 @@ function newMedicationRow(id) {
   };
 }
 
-function ProcedureBlock({ pet, actor, recordedAt }) {
-  const [enabled, setEnabled] = useState("no");
-  const [selectedTypes, setSelectedTypes] = useState([]);
-  const [medicationRows, setMedicationRows] = useState([newMedicationRow(1)]);
+function ProcedureBlock({ pet, actor, recordedAt, initial = {} }) {
+  const [enabled, setEnabled] = useState(initial.procedimientos_habilitados ? "si" : "no");
+  const [selectedTypes, setSelectedTypes] = useState(initial.tipos_procedimiento || []);
+  const [medicationRows, setMedicationRows] = useState(
+    Array.isArray(initial.formula_medicamentos) && initial.formula_medicamentos.length
+      ? initial.formula_medicamentos.map((row, index) => ({ ...newMedicationRow(index + 1), ...row, id: index + 1 }))
+      : [newMedicationRow(1)]
+  );
   const homeTreatmentSelected = selectedTypes.includes("Tratamiento farmacológico en casa");
 
   function toggleType(type, checked) {
@@ -167,7 +172,7 @@ function ProcedureBlock({ pet, actor, recordedAt }) {
             <div className="formGrid procedureMetaGrid">
               <label>
                 <span>Área de consulta</span>
-                <select name="area_consulta" defaultValue="" required>
+                <select name="area_consulta" defaultValue={initial.area_consulta || ""} required>
                   <option value="" disabled>Selecciona una opción</option>
                   <option value="Medicación">Medicación</option>
                   <option value="Hospitalización">Hospitalización</option>
@@ -175,7 +180,7 @@ function ProcedureBlock({ pet, actor, recordedAt }) {
               </label>
               <label>
                 <span>Valor total del servicio</span>
-                <input name="valor_total_servicio" type="number" min="0" step="0.01" defaultValue="0" />
+                <input name="valor_total_servicio" type="number" min="0" step="0.01" defaultValue={initial.valor_total_servicio ?? ""} />
               </label>
             </div>
 
@@ -199,7 +204,7 @@ function ProcedureBlock({ pet, actor, recordedAt }) {
 
             <label className="stackedField">
               <span>Observaciones</span>
-              <textarea name="observaciones_procedimiento" rows="4" />
+              <textarea name="observaciones_procedimiento" rows="4" defaultValue={initial.observaciones_procedimiento || ""} />
             </label>
 
             {homeTreatmentSelected ? (
@@ -225,7 +230,7 @@ function ProcedureBlock({ pet, actor, recordedAt }) {
 
                 <label className="stackedField prescriptionDescription">
                   <span>Descripción</span>
-                  <textarea name="formula_descripcion" rows="4" placeholder="Indicaciones generales para el tratamiento en casa" />
+                  <textarea name="formula_descripcion" rows="4" placeholder="Indicaciones generales para el tratamiento en casa" defaultValue={initial.formula_descripcion || ""} />
                 </label>
 
                 <input
@@ -364,30 +369,39 @@ function ClinicalForm({
   actor,
   recordedAt,
   procedureSchemaReady,
-  onCancel
+  onCancel,
+  initialConsultation = null,
+  readOnly = false
 }) {
-  const [foodType, setFoodType] = useState("");
-  const [stoolType, setStoolType] = useState("");
-  const [observation, setObservation] = useState("no");
+  const initial = initialConsultation || {};
+  const [foodType, setFoodType] = useState(initial.tipo_alimento || "");
+  const [stoolType, setStoolType] = useState(initial.heces || "");
+  const [observation, setObservation] = useState(initial.habilitar_observacion ? "si" : "no");
   const [systemStatus, setSystemStatus] = useState(
-    () => Object.fromEntries(systems.map(([key]) => [key, "No evaluado"]))
+    () => Object.fromEntries(systems.map(([key]) => [key, initial.revision_sistemas?.[key]?.estado || "No evaluado"]))
   );
-  const action = useMemo(() => createConsultation.bind(null, pet.id), [pet.id]);
+  const action = useMemo(
+    () => initialConsultation?.id
+      ? updateConsultation.bind(null, pet.id, initialConsultation.id)
+      : createConsultation.bind(null, pet.id),
+    [pet.id, initialConsultation?.id]
+  );
   const defaultVeterinarianId = veterinarians.some((vet) => vet.id === actor.id)
     ? actor.id
     : veterinarians[0]?.id || "";
 
   return (
-    <form action={action} className="clinicalForm">
+    <form action={readOnly ? undefined : action} className={readOnly ? "clinicalForm clinicalReadOnly" : "clinicalForm"}>
       <div className="clinicalFormHeading">
         <div>
           <p className="eyebrow">Historia clínica</p>
-          <h2>Nueva consulta o control</h2>
+          <h2>{readOnly ? "Historia clínica registrada" : initialConsultation ? "Editar consulta o control" : "Nueva consulta o control"}</h2>
           <p>Fecha de registro: <strong>{formatDateTime(recordedAt)}</strong></p>
           <p>Completa únicamente los apartados evaluados. Los campos clínicos no diligenciados son opcionales.</p>
         </div>
-        <button className="buttonSecondary" type="button" onClick={onCancel}>Cancelar</button>
+        {!readOnly ? <button className="buttonSecondary" type="button" onClick={onCancel}>Cancelar</button> : null}
       </div>
+      <fieldset className="clinicalReadonlyFields" disabled={readOnly}>
 
       <details className="clinicalBlock" open>
         <summary>Datos de la mascota</summary>
@@ -409,7 +423,7 @@ function ClinicalForm({
         <div className="clinicalBlockContent formGrid">
           <label>
             <span>Tipo de servicio</span>
-            <select name="tipo_servicio" required defaultValue="">
+            <select name="tipo_servicio" required defaultValue={initial.tipo_servicio || ""}>
               <option value="" disabled>Selecciona una opción</option>
               <option value="Consulta">Consulta</option>
               <option value="Control">Control</option>
@@ -417,8 +431,10 @@ function ClinicalForm({
           </label>
           <label>
             <span>Médico veterinario</span>
-            <select name="medico_veterinario_id" required defaultValue={defaultVeterinarianId}>
+            <select name="medico_veterinario_id" required defaultValue={initial.medico_veterinario_id || defaultVeterinarianId}>
               {!veterinarians.length ? <option value="">No hay veterinarios activos</option> : null}
+              {initial.medico_veterinario_id && !veterinarians.some((vet) => vet.id === initial.medico_veterinario_id)
+                ? <option value={initial.medico_veterinario_id}>{initial.medico_veterinario_nombre || "Médico anterior"}</option> : null}
               {veterinarians.map((vet) => (
                 <option key={vet.id} value={vet.id}>{vet.nombre}</option>
               ))}
@@ -426,12 +442,13 @@ function ClinicalForm({
           </label>
           <label className="fullField">
             <span>Motivo de cita</span>
-            <textarea name="motivo_cita" rows="3" />
+            <textarea name="motivo_cita" rows="3" defaultValue={initial.motivo_cita || ""} />
           </label>
           <label className="fullField">
             <span>Anamnesis</span>
             <textarea
               name="anamnesis"
+              defaultValue={initial.anamnesis || ""}
               rows="4"
               placeholder="¿En qué estado inicial se encuentra la mascota al llegar a la cita?"
             />
@@ -449,16 +466,16 @@ function ClinicalForm({
           {foodType === "Otro" ? (
             <label>
               <span>Otro tipo de alimento</span>
-              <input name="tipo_alimento_otro" placeholder="Especifica el alimento" />
+              <input name="tipo_alimento_otro" defaultValue={initial.tipo_alimento_otro || ""} placeholder="Especifica el alimento" />
             </label>
           ) : null}
           <label className="fullField">
             <span>Ración</span>
-            <textarea name="racion" rows="2" placeholder="¿Cómo es la ración que se le da?" />
+            <textarea name="racion" rows="2" defaultValue={initial.racion || ""} placeholder="¿Cómo es la ración que se le da?" />
           </label>
           <label>
             <span>Orina</span>
-            <input name="orina" placeholder="Estado de la orina" />
+            <input name="orina" defaultValue={initial.orina || ""} placeholder="Estado de la orina" />
           </label>
           <label>
             <span>Heces</span>
@@ -474,7 +491,7 @@ function ClinicalForm({
           {stoolType === "Otro" ? (
             <label>
               <span>Otro estado de las heces</span>
-              <input name="heces_otro" placeholder="Especifica el estado" />
+              <input name="heces_otro" defaultValue={initial.heces_otro || ""} placeholder="Especifica el estado" />
             </label>
           ) : null}
         </div>
@@ -484,14 +501,14 @@ function ClinicalForm({
         <summary>Examen clínico</summary>
         <div className="clinicalBlockContent">
           <div className="formGrid clinicalMeasurements">
-            <label><span>F.C.</span><input name="frecuencia_cardiaca" type="number" min="0" placeholder="Frecuencia cardiaca" /></label>
-            <label><span>F.R.</span><input name="frecuencia_respiratoria" type="number" min="0" placeholder="Frecuencia respiratoria" /></label>
-            <label><span>Temp. (°C)</span><input name="temperatura_c" type="number" min="20" max="50" step="0.1" placeholder="Temperatura actual" /></label>
-            <label><span>TLLC</span><input name="tllc_segundos" type="number" min="0" step="0.1" placeholder="Tiempo de llenado capilar" /></label>
-            <label><span>Pulso</span><input name="pulso" placeholder="Pulso" /></label>
-            <label><span>Peso actual (kg)</span><input name="peso_actual_kg" type="number" min="0" step="0.01" defaultValue={pet.peso_kg ?? ""} placeholder="Peso actual" /></label>
-            <label><span>Actitud</span><input name="actitud" placeholder="Decaído, adormecido, etc." /></label>
-            <label><span>C/C</span><input name="condicion_corporal" placeholder="Condición corporal: gordo, flaco, etc." /></label>
+            <label><span>F.C.</span><input name="frecuencia_cardiaca" defaultValue={initial.frecuencia_cardiaca ?? ""} type="number" min="0" placeholder="Frecuencia cardiaca" /></label>
+            <label><span>F.R.</span><input name="frecuencia_respiratoria" defaultValue={initial.frecuencia_respiratoria ?? ""} type="number" min="0" placeholder="Frecuencia respiratoria" /></label>
+            <label><span>Temp. (°C)</span><input name="temperatura_c" defaultValue={initial.temperatura_c ?? ""} type="number" min="20" max="50" step="0.1" placeholder="Temperatura actual" /></label>
+            <label><span>TLLC</span><input name="tllc_segundos" defaultValue={initial.tllc_segundos ?? ""} type="number" min="0" step="0.1" placeholder="Tiempo de llenado capilar" /></label>
+            <label><span>Pulso</span><input name="pulso" defaultValue={initial.pulso ?? ""} placeholder="Pulso" /></label>
+            <label><span>Peso actual (kg)</span><input name="peso_actual_kg" type="number" min="0" step="0.01" defaultValue={initial.peso_actual_kg ?? pet.peso_kg ?? ""} placeholder="Peso actual" /></label>
+            <label><span>Actitud</span><input name="actitud" defaultValue={initial.actitud ?? ""} placeholder="Decaído, adormecido, etc." /></label>
+            <label><span>C/C</span><input name="condicion_corporal" defaultValue={initial.condicion_corporal ?? ""} placeholder="Condición corporal: gordo, flaco, etc." /></label>
           </div>
 
           <div className="systemsGrid">
@@ -516,6 +533,7 @@ function ClinicalForm({
                   <textarea
                     name={`sistema_${key}_detalle`}
                     rows="2"
+                    defaultValue={initial.revision_sistemas?.[key]?.detalle || ""}
                     placeholder={`Describe la alteración en ${label.toLowerCase()}`}
                   />
                 ) : null}
@@ -525,7 +543,7 @@ function ClinicalForm({
 
           <label className="stackedField">
             <span>Comentarios y observaciones</span>
-            <textarea name="comentarios_observaciones" rows="4" />
+            <textarea name="comentarios_observaciones" rows="4" defaultValue={initial.comentarios_observaciones || ""} />
           </label>
         </div>
       </details>
@@ -536,14 +554,14 @@ function ClinicalForm({
           <div className="clinicalBlockContent">
             <label className="stackedField">
               <span>Descripción</span>
-              <textarea name={name} rows="5" />
+              <textarea name={name} rows="5" defaultValue={initial[name] || ""} />
             </label>
           </div>
         </details>
       ))}
 
       {procedureSchemaReady ? (
-        <ProcedureBlock pet={pet} actor={actor} recordedAt={recordedAt} />
+        <ProcedureBlock pet={pet} actor={actor} recordedAt={recordedAt} initial={initial} />
       ) : (
         <div className="formAlert">
           El bloque Procedimientos estará disponible cuando se complete la actualización de la tabla clínica.
@@ -556,7 +574,7 @@ function ClinicalForm({
           <div className="clinicalBlockContent">
             <label className="stackedField">
               <span>Descripción</span>
-              <textarea name={name} rows="5" />
+              <textarea name={name} rows="5" defaultValue={initial[name] || ""} />
             </label>
           </div>
         </details>
@@ -577,14 +595,15 @@ function ClinicalForm({
         </div>
       </details>
 
-      {!veterinarians.length ? (
+      </fieldset>
+      {!veterinarians.length && !readOnly ? (
         <div className="formAlert">No hay médicos veterinarios activos para esta empresa. Crea un veterinario antes de guardar la consulta.</div>
       ) : null}
 
-      <div className="clinicalFormActions">
+      {!readOnly ? <div className="clinicalFormActions">
         <button className="buttonSecondary" type="button" onClick={onCancel}>Cancelar</button>
         <SubmitConsultationButton disabled={!veterinarians.length} />
-      </div>
+      </div> : null}
     </form>
   );
 }
