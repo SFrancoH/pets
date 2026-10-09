@@ -1901,3 +1901,38 @@ button:hover {
     text-align: left;
   }
 }
+
+/* PETS: ficha editable, consulta en modo lectura e historial escalable */
+.profileEditPanel { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.profileEditPanel > summary { padding: 16px 20px; font-weight: 800; cursor: pointer; background: #ecf7f2; color: #215e41; }
+.profileEditPanel > .formAlert, .profileEditPanel > form { margin: 18px; }
+.profileEditPanel .registrationGrid { padding: 4px 0; }
+.clinicalReadonlyFields { display: grid; gap: 14px; margin: 0; padding: 0; min-width: 0; border: 0; }
+.clinicalReadOnly :is(input, textarea, select):disabled {
+  opacity: 1; color: #33423a; -webkit-text-fill-color: #33423a;
+  background: #f5f8f7; cursor: default; border-color: #d7e1dc;
+}
+.clinicalReadOnly :is(input[type="radio"], input[type="checkbox"]):disabled { opacity: 1; }
+.clinicalReadOnly .clinicalFormHeading h2 { font-size: 22px; }
+.consultationRecordActions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+.consultationRecordActions > span { color: var(--muted); font-size: 13px; }
+.clinicalRecordContent { padding: clamp(12px, 3vw, 24px); }
+.moduleOverviewGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 22px; }
+.moduleOverviewCard { display: grid; gap: 12px; border: 1px solid #dbe4df; border-radius: 12px; padding: 16px; background: #fafcfb; min-height: 124px; }
+.moduleOverviewCard strong { font-size: 14px; }
+.moduleOverviewCard > div { display: grid; gap: 6px; }
+.moduleOverviewCard span { color: #376148; font-size: 13px; }
+.moduleOverviewCard small, .moduleOverviewCard .muted { color: var(--muted); font-size: 12px; }
+.historyMoreAction { margin-top: 24px; }
+.fullClinicalTimeline { border-top: 1px solid var(--line); margin-top: 22px; padding-top: 20px; }
+.historyFilter { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; margin: 16px 0; }
+.historyFilter label { display: grid; gap: 5px; font-size: 13px; font-weight: 700; }
+.historyFilter input { min-height: 38px; }
+.historyFilter button, .historyFilter .secondaryLink { min-height: 38px; }
+.historyPagination { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 16px; padding-top: 24px; }
+.historyPagination a { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; text-decoration: none; }
+@media (max-width: 720px) {
+  .consultationRecordActions { align-items: stretch; flex-direction: column; }
+  .historyFilter { align-items: stretch; flex-direction: column; }
+  .moduleOverviewGrid { grid-template-columns: 1fr; }
+}
