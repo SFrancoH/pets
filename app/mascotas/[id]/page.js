@@ -160,7 +160,17 @@ export default async function PetDetailPage({ params, searchParams }) {
 
         <section className="recordSection">
           <p className="eyebrow">Relaciones</p>
-          <h2>Propietarios asociados</h2>
+          <div className="associationHeading">
+            <h2>Propietarios asociados</h2>
+            <Link className="actionLink" href={`/mascotas/${pet.id}/propietarios/nuevo`}>Agregar otro propietario</Link>
+          </div>
+          {queryParams?.propietario === "creado_y_asociado" ? (
+            <div className="successAlert">Se creó el propietario y se asoció a esta mascota.</div>
+          ) : queryParams?.propietario === "existente_asociado" ? (
+            <div className="successAlert">El propietario ya existía y fue asociado sin duplicarlo.</div>
+          ) : queryParams?.propietario === "ya_asociado" ? (
+            <div className="successAlert">Este propietario ya estaba asociado a la mascota. No se duplicó la relación.</div>
+          ) : null}
           <div className="associationGrid">
             {owners.length ? owners.map((owner) => (
               <Link className="associationCard" href={`/propietarios/${owner.id}`} key={owner.id}>
