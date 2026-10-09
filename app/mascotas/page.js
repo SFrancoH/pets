@@ -39,8 +39,7 @@ export default async function PetsPage({ searchParams }) {
     .from("mascotas")
     .select(
       `id, empresa_id, nombre, numero_carnet, raza, especie, sexo,
-       fecha_nacimiento, fecha_fallecimiento, estado,
-       empresas(nombre),
+       fecha_nacimiento, fecha_fallecimiento, estado, fuente,
        propietarios_mascotas(propietarios(id, nombre, telefono, whatsapp))`,
       { count: "exact" }
     );
@@ -142,7 +141,7 @@ export default async function PetsPage({ searchParams }) {
                 <th>Fecha de nacimiento</th>
                 <th>Propietarios</th>
                 <th>Teléfono</th>
-                {profile.rol === "super_admin" ? <th>Empresa</th> : null}
+                <th>SEDE</th>
                 <th>Estado</th>
                 <th>Acciones</th>
               </tr>
@@ -161,13 +160,13 @@ export default async function PetsPage({ searchParams }) {
                       <span key={owner.id}>{index ? ", " : ""}<Link href={`/propietarios/${owner.id}`}>{owner.nombre}</Link></span>
                     )) : "Sin asociar"}</td>
                     <td>{owners.map((owner) => owner.whatsapp || owner.telefono).filter(Boolean).join(" - ") || "—"}</td>
-                    {profile.rol === "super_admin" ? <td>{pet.empresas?.nombre || "—"}</td> : null}
+                    <td>{pet.fuente || "—"}</td>
                     <td>{pet.fecha_fallecimiento ? "Fallecido" : pet.estado || "Activo"}</td>
                     <td><Link className="tableAction" href={`/mascotas/${pet.id}`}>Ver ficha</Link></td>
                   </tr>
                 );
               }) : (
-                <tr><td className="tableEmpty" colSpan={profile.rol === "super_admin" ? 10 : 9}>No hay mascotas para mostrar.</td></tr>
+                <tr><td className="tableEmpty" colSpan={10}>No hay mascotas para mostrar.</td></tr>
               )}
             </tbody>
           </table>
