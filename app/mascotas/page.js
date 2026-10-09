@@ -161,7 +161,7 @@ export default async function PetsPage({ searchParams }) {
                     )) : "Sin asociar"}</td>
                     <td>{owners.map((owner) => owner.whatsapp || owner.telefono).filter(Boolean).join(" - ") || "—"}</td>
                     <td>{pet.fuente || "—"}</td>
-                    <td>{pet.fecha_fallecimiento ? "Fallecido" : pet.estado || "Activo"}</td>
+                    <td>{pet.estado || (pet.fecha_fallecimiento ? "Fallecido" : "Activo")}</td>
                     <td><Link className="tableAction" href={`/mascotas/${pet.id}`}>Ver ficha</Link></td>
                   </tr>
                 );
