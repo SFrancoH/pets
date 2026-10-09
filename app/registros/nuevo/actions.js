@@ -21,7 +21,7 @@ function fail(code) {
   redirect(`/registros/nuevo?error=${encodeURIComponent(code)}`);
 }
 
-export async function createPendingPetRegistration(formData) {
+export async function createPetRegistration(formData) {
   const profile = await requireOperationalProfile();
   const requestedCompanyId = text(formData, "empresa_id", 40);
   const companyId = profile.rol === "super_admin" ? requestedCompanyId : profile.empresa_id;
