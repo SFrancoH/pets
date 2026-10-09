@@ -671,75 +671,122 @@ function ProcedureHistory({ consultation }) {
   );
 }
 
-function ConsultationHistory({ consultations }) {
-  if (!consultations.length) {
-    return (
-      <div className="emptyState clinicalEmpty">
-        <h2>Aún no hay consultas o controles</h2>
-        <p>Crea la primera historia clínica de esta mascota con el botón “Nueva consulta”.</p>
-      </div>
-    );
-  }
+function ConsultationEntry({ consultation, pet, veterinarians, actor, procedureSchemaReady }) {
+  const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
+  return (
+    <details className="consultationCard" onToggle={(event) => setExpanded(event.currentTarget.open)}>
+      <summary>
+        <span>
+          <strong>{consultation.tipo_servicio}</strong>
+          <small>{formatDateTime(consultation.fecha_registro)}</small>
+        </span>
+        <span className="historyDoctor">{consultation.medico_veterinario_nombre}</span>
+      </summary>
+      {expanded ? (
+        <div className="consultationCardContent clinicalRecordContent">
+          <div className="consultationRecordActions">
+            <span>{editing ? "Editando consulta" : "Consulta guardada · Solo lectura"}</span>
+            <button type="button" className="buttonSecondary" onClick={() => setEditing((open) => !open)}>
+              {editing ? "Cancelar edición" : "Editar consulta"}
+            </button>
+          </div>
+          <ClinicalForm
+            key={`${consultation.id}-${editing ? "edit" : "read"}`}
+            pet={pet} veterinarians={veterinarians} actor={actor}
+            recordedAt={consultation.fecha_registro}
+            procedureSchemaReady={procedureSchemaReady}
+            initialConsultation={consultation} readOnly={!editing}
+            onCancel={() => setEditing(false)}
+          />
+          <p className="historyRegisteredBy">Creada por <strong>{consultation.medico_registra_nombre}</strong> · Última modificación: {formatDateTime(consultation.updated_at)}</p>
+        </div>
+      ) : null}
+    </details>
+  );
+}
 
+function ConsultationHistory({ consultations, pet, veterinarians, actor, procedureSchemaReady }) {
+  if (!consultations.length) {
+    return <div className="emptyState clinicalEmpty"><h2>No hay registros en este período</h2><p>Crea una nueva consulta o ajusta el rango de fechas.</p></div>;
+  }
   return (
     <div className="consultationHistory">
-      {consultations.map((consultation) => {
-        const abnormalSystems = Object.entries(consultation.revision_sistemas || {})
-          .filter(([, value]) => value?.estado === "Anormal");
-        return (
-          <details className="consultationCard" key={consultation.id}>
-            <summary>
-              <span>
-                <strong>{consultation.tipo_servicio}</strong>
-                <small>{formatDateTime(consultation.fecha_registro)}</small>
-              </span>
-              <span className="historyDoctor">{consultation.medico_veterinario_nombre}</span>
-            </summary>
-            <div className="consultationCardContent">
-              <dl className="historyDetailGrid">
-                <HistoryValue label="Motivo de cita" value={consultation.motivo_cita} />
-                <HistoryValue label="Anamnesis" value={consultation.anamnesis} />
-                <HistoryValue label="Alimentación" value={[consultation.tipo_alimento, consultation.tipo_alimento_otro].filter(Boolean).join(": ")} />
-                <HistoryValue label="Ración" value={consultation.racion} />
-                <HistoryValue label="Orina" value={consultation.orina} />
-                <HistoryValue label="Heces" value={[consultation.heces, consultation.heces_otro].filter(Boolean).join(": ")} />
-                <HistoryValue label="F.C." value={consultation.frecuencia_cardiaca} />
-                <HistoryValue label="F.R." value={consultation.frecuencia_respiratoria} />
-                <HistoryValue label="Temperatura" value={consultation.temperatura_c !== null ? `${consultation.temperatura_c} °C` : null} />
-                <HistoryValue label="TLLC" value={consultation.tllc_segundos !== null ? `${consultation.tllc_segundos} s` : null} />
-                <HistoryValue label="Pulso" value={consultation.pulso} />
-                <HistoryValue label="Peso actual" value={consultation.peso_actual_kg !== null ? `${consultation.peso_actual_kg} kg` : null} />
-                <HistoryValue label="Actitud" value={consultation.actitud} />
-                <HistoryValue label="Condición corporal" value={consultation.condicion_corporal} />
-              </dl>
-
-              {abnormalSystems.length ? (
-                <div className="abnormalSummary">
-                  <h3>Hallazgos anormales</h3>
-                  {abnormalSystems.map(([key, value]) => (
-                    <div key={key}><strong>{systemLabels[key] || key}:</strong> {value.detalle || "Sin descripción"}</div>
-                  ))}
-                </div>
-              ) : null}
-
-              <dl className="historyNarratives">
-                <HistoryValue label="Comentarios y observaciones" value={consultation.comentarios_observaciones} />
-                {narrativeSections.map(([name, label]) => (
-                  <HistoryValue label={label} value={consultation[name]} key={name} />
-                ))}
-              </dl>
-
-              <ProcedureHistory consultation={consultation} />
-
-              {consultation.habilitar_observacion ? (
-                <div className="responsibilityNotice">{responsibilityText(consultation.medico_registra_nombre)}</div>
-              ) : null}
-              <p className="historyRegisteredBy">Registrada por <strong>{consultation.medico_registra_nombre}</strong></p>
-            </div>
-          </details>
-        );
-      })}
+      {consultations.map((consultation) => (
+        <ConsultationEntry key={consultation.id} consultation={consultation} pet={pet}
+          veterinarians={veterinarians} actor={actor} procedureSchemaReady={procedureSchemaReady} />
+      ))}
     </div>
+  );
+}
+
+function PetHistoryOverview({ pet, latestConsultation, latestProcedure, latestFormula, consultations,
+  veterinarians, actor, procedureSchemaReady, historyOpen, historyPage, historyTotal, historyFrom, historyTo }) {
+  const moduleOverview = [
+    ["Consulta y control", latestConsultation],
+    ["Fórmula y remisión", latestFormula],
+    ["Procedimientos", latestProcedure],
+    ["Vacunación", null],
+    ["Desparasitación", null],
+    ["Estética", null],
+    ["Guardería", null],
+    ["Seguimiento", null],
+    ["Consentimientos", null]
+  ];
+  const totalPages = Math.max(1, Math.ceil(historyTotal / 50));
+  const historyHref = (page) => {
+    const q = new URLSearchParams({ historial: "1", pagina: String(page) });
+    if (historyFrom) q.set("desde", historyFrom);
+    if (historyTo) q.set("hasta", historyTo);
+    return `/mascotas/${pet.id}?${q.toString()}`;
+  };
+  return (
+    <section className="consultationWorkspace petHistoryOverview">
+      <div className="consultationToolbar">
+        <div><p className="eyebrow">Historia clínica</p><h2>Historial de la mascota</h2>
+          <p>Último registro de cada módulo de {pet.nombre}. Los módulos sin implementación mostrarán «Sin registros».</p>
+        </div>
+      </div>
+      <div className="moduleOverviewGrid">
+        {moduleOverview.map(([label, record]) => (
+          <div className="moduleOverviewCard" key={label}>
+            <strong>{label}</strong>
+            {record ? (
+              <div><span>{record.tipo_servicio} · {formatDateTime(record.fecha_registro)}</span>
+                <small>{record.motivo_cita || record.medico_veterinario_nombre || "Registro clínico"}</small>
+              </div>
+            ) : <span className="muted">Sin registros disponibles</span>}
+          </div>
+        ))}
+      </div>
+      {!historyOpen ? (
+        <div className="historyMoreAction">
+          <Link className="actionLink" href={historyHref(1)}>Ver más — historial cronológico</Link>
+        </div>
+      ) : (
+        <div className="fullClinicalTimeline" id="historial-completo">
+          <div className="consultationToolbar"><h3>Historial cronológico</h3>
+            <Link className="secondaryLink" href={`/mascotas/${pet.id}`}>Ver solo resumen</Link></div>
+          <form method="get" action={`/mascotas/${pet.id}`} className="historyFilter">
+            <input type="hidden" name="historial" value="1" />
+            <label>Desde<input type="date" name="desde" defaultValue={historyFrom} /></label>
+            <label>Hasta<input type="date" name="hasta" defaultValue={historyTo} /></label>
+            <button type="submit">Buscar por fechas</button>
+            <Link className="secondaryLink" href={historyHref(1).split("&desde=")[0].split("&hasta=")[0]}>Limpiar</Link>
+          </form>
+          <p className="description">{historyTotal} consultas y controles encontrados. Se muestran hasta 50 por página, del más reciente al más antiguo. Las demás categorías se incorporarán cuando sus módulos estén habilitados.</p>
+          <ConsultationHistory consultations={consultations} pet={pet} veterinarians={veterinarians}
+            actor={actor} procedureSchemaReady={procedureSchemaReady} />
+          {totalPages > 1 ? (
+            <nav className="historyPagination" aria-label="Paginación del historial">
+              {historyPage > 1 ? <Link href={historyHref(historyPage - 1)}>← Anterior</Link> : null}
+              <span>Página {historyPage} de {totalPages}</span>
+              {historyPage < totalPages ? <Link href={historyHref(historyPage + 1)}>Siguiente →</Link> : null}
+            </nav>
+          ) : null}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -748,6 +795,14 @@ export default function ConsultationControlPanel({
   veterinarians,
   actor,
   consultations,
+  latestConsultation,
+  latestProcedure,
+  latestFormula,
+  historyOpen,
+  historyPage,
+  historyTotal,
+  historyFrom,
+  historyTo,
   historyAvailable,
   procedureSchemaReady,
   recordedAt,
@@ -786,10 +841,18 @@ export default function ConsultationControlPanel({
         })}
       </nav>
 
+      {selectedModule === "historia" ? (
+        <PetHistoryOverview pet={pet} latestConsultation={latestConsultation}
+          latestProcedure={latestProcedure} latestFormula={latestFormula}
+          historyOpen={historyOpen} historyPage={historyPage} historyTotal={historyTotal}
+          historyFrom={historyFrom} historyTo={historyTo} consultations={consultations}
+          veterinarians={veterinarians} actor={actor} procedureSchemaReady={procedureSchemaReady} />
+      ) : null}
+
       {selectedModule === "consulta-control" ? (
         <section className="consultationWorkspace">
-          {success === "consulta_creada" && view === "history" ? (
-            <div className="successAlert">La consulta clínica se guardó correctamente.</div>
+          {(success === "consulta_creada" || success === "consulta_actualizada") && view === "history" ? (
+            <div className="successAlert">{success === "consulta_actualizada" ? "La consulta se actualizó correctamente." : "La consulta clínica se guardó correctamente."}</div>
           ) : null}
           {error ? (
             <div className="formAlert">
@@ -832,7 +895,9 @@ export default function ConsultationControlPanel({
               {!historyAvailable ? (
                 <div className="formAlert">La tabla de consultas todavía no está activa en Supabase.</div>
               ) : (
-                <ConsultationHistory consultations={consultations} />
+                <><ConsultationHistory consultations={consultations} pet={pet}
+                  veterinarians={veterinarians} actor={actor} procedureSchemaReady={procedureSchemaReady} />
+                  <Link className="secondaryLink" href={`/mascotas/${pet.id}?historial=1`}>Ver más registros</Link></>
               )}
             </>
           )}
