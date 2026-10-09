@@ -78,6 +78,7 @@ export async function importPets(formData) {
         numero_carnet: numeroCarnet,
         fuente: textValue(pick(source, ["fuente", "sede"])),
         estado_reproductivo: textValue(pick(source, ["estado_reproductivo", "estado reproductivo"])),
+        tamano: textValue(pick(source, ["tamano", "tamaño"])),
         numero_partos: numberValue(pick(source, ["numero_partos", "numero de partos", "numerodepartos"]), true),
         color: textValue(pick(source, ["color"])),
         fecha_fallecimiento: dateValue(pick(source, ["fecha_fallecimiento", "fecha de fallecimiento"]), slashOrder),
