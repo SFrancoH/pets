@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 
 import { requireOperationalProfile } from "@/lib/operational";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { especies, razas, sedes, temperamentos, estadosReproductivos, tamanos } from "@/lib/pet-catalogs";
+import { especies, razas, sedes, temperamentos, estadosReproductivos, tamanos, estadosMascota } from "@/lib/pet-catalogs";
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -54,6 +54,7 @@ export async function createPendingPetRegistration(formData) {
     estado_reproductivo: text(formData, "estado_reproductivo", 100),
     numero_partos: optionalNumber(formData, "numero_partos"),
     tamano: text(formData, "tamano", 30),
+    estado: text(formData, "estado", 20) || "Activo",
     fuente: owner.fuente
   };
   const carnet = text(formData, "numero_carnet", 40);
@@ -68,7 +69,7 @@ export async function createPendingPetRegistration(formData) {
   if (!especies.includes(pet.especie) || (pet.raza && !razas.includes(pet.raza)) ||
       (pet.temperamento && !temperamentos.includes(pet.temperamento)) ||
       (pet.estado_reproductivo && !estadosReproductivos.includes(pet.estado_reproductivo)) ||
-      (pet.tamano && !tamanos.includes(pet.tamano))) fail("mascota");
+      (pet.tamano && !tamanos.includes(pet.tamano)) || !estadosMascota.includes(pet.estado)) fail("mascota");
   if (!["Si", "No"].includes(owner.notificacion_email) || !["Si", "No"].includes(owner.notificacion_whatsapp)) {
     fail("notificaciones");
   }
