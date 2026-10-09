@@ -288,3 +288,32 @@ No desplegar frontend ni acciones que dependan de `tamano`, `registrar_propietar
 - Crear propietario/mascota desde formulario para verificar nuevos valores de dropdown y `fuente`.
 - Consultar datos actuales mediante agregación `GROUP BY fuente` sin exponer PII y comparar lo almacenado con la UI.
 - Recompilar y validar que Vercel desplegó el último commit de `main`.
+
+
+## 13. Cambio — 2026-10-09 — Agregar otro propietario desde la ficha de mascota
+
+### Decisión ADR-017 — Asociación idempotente con búsqueda por documento y teléfono
+
+- **Motivo:** agregar un propietario adicional a una mascota desde el bloque «Relaciones → Propietarios asociados», evitando duplicar propietarios históricos o sus relaciones.
+- **Navegación:** botón **Agregar otro propietario** en `app/mascotas/[id]/page.js` → ruta interna `/mascotas/[id]/propietarios/nuevo`.
+- **Interfaz:** `components/owner-registration-fields.js` comparte el **mismo bloque** de datos y selección SEDE entre `/registros/nuevo` y la nueva ruta. La segunda ruta no muestra ni solicita datos de mascota, porque se recuperan del ID de la ficha y se verifican con la sesión.
+- **Espaciado:** `.ownerSedeField { margin-bottom: 20px; }` separa el dropdown SEDE del encabezado «1 Datos del propietario» en ambos formularios.
+- **SQL nuevo:** `supabase/migrations/009_asociar_propietario_mascota.sql` crea una función RPC con transacción implícita, no una tabla. **Ejecutar después de 006**, y antes de usar el botón.
+- **Búsqueda:** siempre limitada a la empresa de la mascota. Compara documento mediante `lower(btrim(...))` y WhatsApp/teléfono por solo dígitos, sin asociar por números de menos de siete cifras. No hace búsqueda en otras empresas.
+- **Coincidencia inequívoca:** si el propietario existe, conservar sus datos/SEDE y crear únicamente la relación en `propietarios_mascotas`; `ON CONFLICT ... DO NOTHING` evita doble asociación. Si no existe, crear propietario y relación atómicamente.
+- **Conflicto de identidad:** si documento y teléfono apuntan a dos propietarios diferentes, o un teléfono existente pertenece a otro documento, detener el guardado con error explicativo. No se fusionan ni se sobrescriben automáticamente propietarios.
+- **Concurrencia:** bloqueo asesor por empresa en esta función para serializar altas simultáneas por la nueva ruta; se recomienda extender este mecanismo a cualquier otra alta de propietarios para una política global contra duplicados. La unicidad existente por documento también permanece vigente.
+- **Permisos:** la función comprueba usuario activo, empresa de la mascota y pertenencia a la empresa, y está concedida solo a `service_role`. La acción del servidor valida usuario/mascota y usa la clave privilegiada solo en el servidor.
+- **Mensajes:** diferencia `creado_y_asociado`, `existente_asociado` y `ya_asociado`. Conflictos no se resuelven automáticamente.
+- **Estado:** IMPLEMENTADO EN CÓDIGO, PENDIENTE ejecutar SQL 009 en Supabase, compilación de Next.js, despliegue y pruebas de extremo a extremo.
+
+### Pruebas pendientes
+
+1. Desde una mascota, abrir **Agregar otro propietario** y comprobar que solo muestra datos del propietario, precargando una SEDE válida de la mascota si corresponde.
+2. Enviar un propietario nuevo: una fila nueva y una asociación; sin cambiar la mascota.
+3. Enviar documento existente + teléfono coincidente: ninguna fila de propietario nueva y una asociación.
+4. Repetir el envío del mismo propietario para esa mascota: `ya_asociado`, sin duplicados.
+5. Enviar documento de un propietario y teléfono de otro: mostrar conflicto, sin escrituras.
+6. Enviar el teléfono de un propietario existente con documento diferente: mostrar conflicto, sin escrituras.
+7. Probar dos empresas: ninguna coincidencia cruzada ni asociación a mascota de otra empresa.
+8. Verificar los 20 px de separación en pantallas móviles y de escritorio.
