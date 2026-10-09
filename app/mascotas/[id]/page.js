@@ -100,7 +100,7 @@ export default async function PetDetailPage({ params, searchParams }) {
             <h1>{pet.nombre}</h1>
             <p className="description">SEDE: {pet.fuente || "Sin sede registrada"}</p>
           </div>
-          <span className={pet.fecha_fallecimiento ? "badgeInactive" : "badgeActive"}>
+          <span className={pet.estado === "Activo" ? "badgeActive" : "badgeInactive"}>
             {pet.estado || (pet.fecha_fallecimiento ? "Fallecido" : "Activo")}
           </span>
         </div>
@@ -117,6 +117,7 @@ export default async function PetDetailPage({ params, searchParams }) {
             estado_reproductivo: pet.estado_reproductivo,
             color: pet.color,
             peso_kg: pet.peso_kg,
+            tamano: pet.tamano,
             propietarios: owners.map((owner) => owner.nombre)
           }}
           veterinarians={veterinarians}
