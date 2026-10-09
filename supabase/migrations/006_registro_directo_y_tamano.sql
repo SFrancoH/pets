@@ -76,7 +76,9 @@ begin
     nullif(p_mascota->>'peso_kg','')::numeric,nullif(p_mascota->>'temperamento',''),
     p_carnet,nullif(p_mascota->>'estado_reproductivo',''),
     nullif(p_mascota->>'numero_partos','')::integer,
-    nullif(p_mascota->>'tamano',''),v_sede,'Activo',p_actor_id,p_actor_id
+    nullif(p_mascota->>'tamano',''),v_sede,
+    case when p_mascota->>'estado' in ('Activo','Inactivo','Fallecido') then p_mascota->>'estado' else 'Activo' end,
+    p_actor_id,p_actor_id
   ) returning id into v_mascota_id;
   insert into public.propietarios_mascotas (empresa_id,propietario_id,mascota_id,creado_por)
   values (p_empresa_id,v_propietario_id,v_mascota_id,p_actor_id);
